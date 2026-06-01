@@ -1,0 +1,35 @@
+spring:
+  application:
+    name: Vendor
+
+  data:
+    mongodb:
+      uri: ${MONGO_URI}
+
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+
+aws:
+  accessKey: ${AWS_ACCESS_KEY}
+  secretKey: ${AWS_SECRET_KEY}
+  region: ${AWS_REGION}
+  bucket: ${AWS_BUCKET}
+
+app:
+  interview:
+    base-url: ${INTERVIEW_BASE_URL}
+
+server:
+  port: 8080
+    

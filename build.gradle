@@ -1,0 +1,79 @@
+plugins {
+	id 'java'
+	id 'org.springframework.boot' version '3.2.5'
+	id 'io.spring.dependency-management' version '1.1.7'
+}
+
+group = 'com.Vendor'
+version = '0.0.1-SNAPSHOT'
+
+java {
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(21)
+	}
+}
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+
+	// Spring Boot
+	implementation 'org.springframework.boot:spring-boot-starter'
+	implementation 'org.springframework.boot:spring-boot-starter-web'
+	implementation 'org.springframework.boot:spring-boot-starter-mail'
+	implementation 'org.springframework.boot:spring-boot-starter-websocket'
+	implementation 'org.springframework.boot:spring-boot-starter-data-mongodb'
+	implementation 'software.amazon.awssdk:s3:2.25.25'
+	implementation 'org.springframework.boot:spring-boot-starter-web'
+	implementation 'com.google.apis:google-api-services-gmail:v1-rev20220404-2.0.0'
+	implementation 'com.google.http-client:google-http-client-jackson2:1.43.3'
+	implementation 'net.sourceforge.tess4j:tess4j:5.11.0'
+	implementation 'org.apache.pdfbox:pdfbox:2.0.29'
+
+
+	// Swagger
+	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.5.0'
+
+	// ✅ Google Calendar + Meet (FIXED VERSION)
+	implementation 'com.google.apis:google-api-services-calendar:v3-rev20220715-2.0.0'
+	implementation 'com.google.oauth-client:google-oauth-client-jetty:1.34.1'
+	implementation 'com.google.oauth-client:google-oauth-client:1.34.1'
+	implementation 'com.google.http-client:google-http-client:1.43.3'
+	implementation 'com.google.http-client:google-http-client-gson:1.43.3'
+	implementation 'com.google.code.gson:gson:2.10.1'
+	implementation 'org.springframework.boot:spring-boot-starter-freemarker'
+
+	// HTML → PDF
+	implementation 'com.openhtmltopdf:openhtmltopdf-pdfbox:1.0.10'
+
+	// LangChain4j
+	implementation 'dev.langchain4j:langchain4j:0.30.0'
+	implementation 'dev.langchain4j:langchain4j-ollama:0.30.0'
+
+	// Apache POI
+	implementation 'org.apache.poi:poi:5.2.5'
+	implementation 'org.apache.poi:poi-ooxml:5.2.5'
+
+	// Apache Tika
+	implementation 'org.apache.tika:tika-core:2.9.2'
+	implementation 'org.apache.tika:tika-parsers-standard-package:2.9.2'
+	implementation 'org.springframework.boot:spring-boot-starter-web'
+
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	// XMLBeans
+	implementation 'org.apache.xmlbeans:xmlbeans:5.1.1'
+
+	// Lombok
+	compileOnly 'org.projectlombok:lombok'
+	annotationProcessor 'org.projectlombok:lombok'
+
+	// Tests
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.named('test') {
+	useJUnitPlatform()
+}
