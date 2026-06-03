@@ -26,6 +26,7 @@ import com.google.api.services.calendar.Calendar;
 
 import com.google.api.services.calendar.CalendarScopes;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 
 import org.springframework.context.annotation.Configuration;
@@ -41,7 +42,7 @@ import java.io.InputStreamReader;
 import java.util.Collections;
  
 @Configuration
-
+@Slf4j
 public class GoogleCalendarConfig {
  
     private static final String APPLICATION_NAME = "AI-Recruiter-Calendar";
@@ -66,8 +67,9 @@ public class GoogleCalendarConfig {
                 ? System.getenv("GOOGLE_CREDENTIALS_PATH")
                 : "./src/main/resources/secrets/credentials.json";
 
-
+        log.info("CredentialsPath: {}", credentialsPath);
         File file = new File(credentialsPath);
+        log.info("File Path: {}", file);
  
         if (!file.exists()) {
 
