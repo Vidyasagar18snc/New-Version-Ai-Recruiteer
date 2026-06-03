@@ -63,24 +63,33 @@ public class GoogleCalendarConfig {
 
 //        String credentialsPath = "/resources/secrets/credentials.json";
 
-        String credentialsPath = System.getenv("GOOGLE_CREDENTIALS_PATH") != null
-                ? System.getenv("GOOGLE_CREDENTIALS_PATH")
-                : "./src/main/resources/secrets/credentials.json";
+//               String credentialsPath = System.getenv("GOOGLE_CREDENTIALS_PATH") != null
+//                ? System.getenv("GOOGLE_CREDENTIALS_PATH")
+//                : "./src/main/resources/secrets/credentials.json";
 
-        log.info("CredentialsPath: {}", credentialsPath);
-        File file = new File(credentialsPath);
-        log.info("File Path: {}", file);
- 
-        if (!file.exists()) {
+        String[] possiblePaths = {
+                "/home/ubuntu/New-Version-Ai-Recruiteer/secrets/credentials.json", // server
+                "./secrets/credentials.json",                                        // local
+                "./src/main/resources/secrets/credentials.json"                      // local alt
+        };
 
-            throw new RuntimeException(
+//        log.info("CredentialsPath: {}", credentialsPath);
+        File file = null;
+//        log.info("File Path: {}", file);
 
-                    "credentials.json not found: " + credentialsPath);
-
+        for (String path : possiblePaths) {
+            File f = new File(path);
+            if (f.exists()) {
+                file = f;
+                log.info("Found credentials at: {}", path);
+                break;
+            }
         }
- 
+
+        if (file == null) {
+            throw new RuntimeException("credentials.json not found in any known path");
+        }
         InputStream in = new FileInputStream(file);
- 
         GoogleClientSecrets clientSecrets =
 
                 GoogleClientSecrets.load(
