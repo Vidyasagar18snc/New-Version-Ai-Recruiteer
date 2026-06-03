@@ -39,7 +39,6 @@ fi
 mkdir -p $LOG_DIR
 
 PID=$(lsof -ti:$APP_PORT)
-
 if [ ! -z "$PID" ]; then
     echo "Stopping existing process on port $APP_PORT (PID: $PID)"
     kill -15 $PID

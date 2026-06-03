@@ -60,8 +60,13 @@ public class GoogleCalendarConfig {
  
         // Load credentials from Docker mounted volume
 
-        String credentialsPath = "/app/secrets/credentials.json";
- 
+//        String credentialsPath = "/resources/secrets/credentials.json";
+
+        String credentialsPath = System.getenv("GOOGLE_CREDENTIALS_PATH") != null
+                ? System.getenv("GOOGLE_CREDENTIALS_PATH")
+                : "./src/main/resources/secrets/credentials.json";
+
+
         File file = new File(credentialsPath);
  
         if (!file.exists()) {
