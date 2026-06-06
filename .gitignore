@@ -36,8 +36,7 @@ out/
 ### VS Code ###
 .vscode/
 .env
-secrets/
-credentials.json
+src/main/resources/secrets/credentials.json
 tokens/
 build/
 target/

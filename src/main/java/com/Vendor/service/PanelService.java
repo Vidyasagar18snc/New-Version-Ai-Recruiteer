@@ -63,9 +63,12 @@ public class PanelService {
                 panel.getId()
         );
     }
-
     public Panel addPanel(Panel panel) {
 
-        return panelRepository.save(panel);
+        Panel saved = panelRepository.save(panel);
+
+        System.out.println("Saved ID: " + saved.getId());
+
+        return saved;
     }
 }

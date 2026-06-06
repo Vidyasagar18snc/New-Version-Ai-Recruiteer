@@ -18,11 +18,7 @@ public class DeboardingController {
             KnowledgeTransferRequest request
     ) {
 
-        return ResponseEntity.ok(
-
-                java.util.Map.of(
-
-                        "message",
+        return ResponseEntity.ok(java.util.Map.of("message",
 
                         deboardingService
                                 .initiateKT(
