@@ -1,0 +1,30 @@
+replicaCount: 2
+
+image:
+repository: shiva9828/shankar-backend
+tag: latest
+pullPolicy: Always
+
+service:
+type: ClusterIP
+port: 3000
+
+ingress:
+enabled: true
+className: nginx
+annotations:
+nginx.ingress.kubernetes.io/rewrite-target: /
+paths:
+- path: /
+pathType: Prefix
+
+env:
+corsOrigin: "https://qtgem.com,https://www.qtgem.com,http://frontend-ci:3000,http://localhost:3000"
+
+secret:
+appSecrets:
+jwtSecret: 6S9WSGui7bE1im3XRvB/UqYq9Ya38hpkgCrM80lpgGU=
+
+mongodb:
+uriSecretName: mongo-secret
+uriSecretKey: mongo-uri

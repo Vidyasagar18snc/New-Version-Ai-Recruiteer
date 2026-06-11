@@ -1,0 +1,121 @@
+pipeline {
+    agent any
+
+    options {
+        disableConcurrentBuilds()
+        buildDiscarder(logRotator(daysToKeepStr: '2'))
+    }
+
+    environment {
+        GIT_URL = 'https://github.com/Vidyasagar18snc/New-Version-Ai-Recruiteer.git'
+        GIT_BRANCH = 'backend-deploy'
+        GIT_CREDENTIALS = 'github_token'
+        IMAGE_NAME = 'shiva9828/ai-recruiter-backend'
+        IMAGE_TAG = 'v1'
+        DOCKERFILE_BASE = 'Dockerfile'
+        DOCKER_REGISTRY_CRED_ID = 'docker_token'
+        SONAR_HOST_URL = 'http://13.235.238.184:9000'
+        CREDS_ID = 'k8s_config'
+        API_URL = 'https://192.168.49.2:8443'
+        CONTEXT_NAME = 'minikube'
+        CLUSTER_NAME = 'minikube'
+        USER_NAME = 'minikube'
+    }
+
+    stages {
+
+        stage('CHECKOUT') {
+            steps {
+                script {
+                    git branch: "${env.GIT_BRANCH}",
+                     credentialsId: "${env.GIT_CREDENTIALS}",
+                      url: "${env.GIT_URL}"
+                }
+            }
+        }
+
+        stage('Sonar Code Quality check') {
+            steps {
+                script {
+                    withCredentials([
+                        string(credentialsId: 'SONAR_TOKEN', variable: 'SONAR_TOKEN')
+                    ]) {
+                        sh """
+                            sonar-scanner \
+                              -Dsonar.projectKey=backend \
+                              -Dsonar.sources=. \
+                              -Dsonar.host.url=${env.SONAR_HOST_URL} \
+                              -Dsonar.token=${SONAR_TOKEN}
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Docker Build and Push') {
+            steps {
+                script {
+                    sh '''
+                        ls -lrt
+                    '''
+                    dockerImage = docker.build("${IMAGE_NAME}:${IMAGE_TAG}", "-f ${DOCKERFILE_BASE} .")
+
+                    docker.withRegistry('', "${DOCKER_REGISTRY_CRED_ID}") {
+                        dockerImage.push()
+                    }
+                }
+            }
+        }
+
+        stage('Trivy Scan') {
+            steps {
+                sh '''
+                    trivy image \
+                    --severity HIGH,CRITICAL \
+                    --format template \
+                    --template '@/home/ubuntu/trivy/trivy_html.tpl' \
+                    --output 'trivy_backend.html' ${IMAGE_NAME}:${IMAGE_TAG}
+                '''
+            }
+        }
+
+        stage('Deploy K8S') {
+            steps {
+                script {
+                    withCredentials([
+                        usernamePassword(
+                            credentialsId: 'argocd-cli-creds',
+                            usernameVariable: 'ARGO_USER',
+                            passwordVariable: 'ARGO_PASS'
+                        )
+                    ]) {
+                        argoAppSyncWithCLI(
+                            appName: 'backend',
+                            argocdHost: '13.235.238.184:31782',
+                            username: env.ARGO_USER,
+                            password: env.ARGO_PASS,
+                            insecure: true
+                        )
+                    }
+                }
+            }
+        }
+
+    }
+
+    post {
+        always {
+            publishHTML(target: [
+                allowMissing: false,
+                alwaysLinkToLastBuild: false,
+                keepAll: true,
+                reportDir: '',
+                reportFiles: 'trivy_backend.html',
+                reportName: 'Backend Trivy',
+                reportTitles: 'The Report'
+            ])
+            cleanWs()
+        }
+    }
+
+}
