@@ -44,22 +44,24 @@ pipeline {
         }
 
         stage('Sonar Code Quality check') {
-            steps {
-                script {
-                    withCredentials([
-                        string(credentialsId: 'SONAR_TOKEN', variable: 'SONAR_TOKEN')
-                    ]) {
-                        sh """
-                            sonar-scanner \
-                              -Dsonar.projectKey=backend \
-                              -Dsonar.sources=. \
-                              -Dsonar.host.url=${env.SONAR_HOST_URL} \
-                              -Dsonar.token=${SONAR_TOKEN}
-                        """
-                    }
+           steps {
+             script {
+                withCredentials([
+                    string(credentialsId: 'SONAR_TOKEN', variable: 'SONAR_TOKEN')
+                ]) {
+                    sh '''
+                      sonar-scanner \
+                      -Dsonar.projectKey=backend \
+                      -Dsonar.sources=src/main/java \
+                      -Dsonar.java.binaries=build/classes/java/main \
+                      -Dsonar.host.url=http://13.235.238.184:9000 \
+                      -Dsonar.token=$SONAR_TOKEN
+                    '''
                 }
-            }
+             }
+          }
         }
+
 
         stage('Docker Build and Push') {
             steps {
