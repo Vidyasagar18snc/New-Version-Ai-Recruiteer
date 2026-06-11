@@ -80,13 +80,14 @@ pipeline {
 
         stage('Trivy Scan') {
             steps {
-                sh '''
-                    trivy image \
-                    --severity HIGH,CRITICAL \
-                    --format template \
-                    --template '@/home/ubuntu/trivy/trivy_html.tpl' \
-                    --output 'trivy_backend.html' ${IMAGE_NAME}:${IMAGE_TAG}
-                '''
+              sh '''
+                  trivy image \
+                  --severity HIGH,CRITICAL \
+                  --format template \
+                  --template '@/opt/trivy/trivy_html.tpl' \
+                  --output trivy_backend.html \
+                  ${IMAGE_NAME}:${IMAGE_TAG}
+              '''
             }
         }
 
