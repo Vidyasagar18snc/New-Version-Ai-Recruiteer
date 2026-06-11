@@ -93,23 +93,29 @@ pipeline {
 
         stage('Deploy K8S') {
             steps {
-                script {
-                    withCredentials([
-                        usernamePassword(
-                            credentialsId: 'argocd-cli-creds',
-                            usernameVariable: 'ARGO_USER',
-                            passwordVariable: 'ARGO_PASS'
-                        )
-                    ]) {
-                        argoAppSyncWithCLI(
-                            appName: 'backend',
-                            argocdHost: '13.235.238.184:31782',
-                            username: env.ARGO_USER,
-                            password: env.ARGO_PASS,
-                            insecure: true
-                        )
-                    }
+              script {
+                withCredentials([
+                    usernamePassword(
+                          credentialsId: 'argocd-cli-creds',
+                          usernameVariable: 'ARGO_USER',
+                          passwordVariable: 'ARGO_PASS'
+                    )
+                ]) {
+                sh '''
+                    argocd login 13.235.238.184:31782 \
+                        --username $ARGO_USER \
+                        --password $ARGO_PASS \
+                        --insecure
+
+                    argocd app sync backend --insecure
+
+                    argocd app wait backend \
+                        --health \
+                        --timeout 120 \
+                        --insecure
+                '''
                 }
+              }
             }
         }
 
