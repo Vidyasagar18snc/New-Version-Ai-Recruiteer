@@ -102,7 +102,7 @@ pipeline {
                     )
                 ]) {
                 sh '''
-                    argocd login 13.235.238.184:31782 \
+                    argocd login 192.168.49.2:31339 \
                         --username $ARGO_USER \
                         --password $ARGO_PASS \
                         --insecure
