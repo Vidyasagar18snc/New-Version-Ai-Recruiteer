@@ -11,10 +11,10 @@ pipeline {
         GIT_BRANCH = 'backend-deploy'
         GIT_CREDENTIALS = 'github_token'
         IMAGE_NAME = 'shiva9828/ai-recruiter-backend'
-        IMAGE_TAG = 'v1'
+        IMAGE_TAG = "${BUILD_NUMBER}"
         DOCKERFILE_BASE = 'Dockerfile'
         DOCKER_REGISTRY_CRED_ID = 'docker_token'
-        SONAR_HOST_URL = 'http://13.235.238.184:9000'
+        SONAR_HOST_URL = 'http://13.235.61.252:9000'
         CREDS_ID = 'k8s_config'
         API_URL = 'https://192.168.49.2:8443'
         CONTEXT_NAME = 'minikube'
@@ -54,7 +54,7 @@ pipeline {
                       -Dsonar.projectKey=backend \
                       -Dsonar.sources=src/main/java \
                       -Dsonar.java.binaries=build/classes/java/main \
-                      -Dsonar.host.url=http://13.235.238.184:9000 \
+                      -Dsonar.host.url=http://13.235.61.252:9000 \
                       -Dsonar.token=$SONAR_TOKEN
                     '''
                 }
@@ -102,16 +102,16 @@ pipeline {
                     )
                 ]) {
                 sh '''
-                    argocd login 192.168.49.2:31339 \
+                    argocd login 192.168.49.2:31855 \
                         --username $ARGO_USER \
                         --password $ARGO_PASS \
                         --insecure
 
-                    argocd app sync backend --insecure
+                    argocd app sync backend 
 
                     argocd app wait backend \
                         --health \
-                        --timeout 120 \
+                        --timeout 300 \
                         --insecure
                 '''
                 }
