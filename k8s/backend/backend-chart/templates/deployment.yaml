@@ -42,33 +42,35 @@ spec:
               name: {{ .Values.secret.mongoSecrets.uriSecretName }}
               key: {{ .Values.secret.mongoSecrets.uriSecretKey }}
 
-
         - name: JWT_SECRET
           valueFrom:
             secretKeyRef:
               name: app-secrets
               key: jwt-secret
 
-
         - name: CORS_ORIGIN
           value: "{{ .Values.env.corsOrigin }}"
 
+        volumeMounts:
+        - name: google-credentials
+          mountPath: /app/credentials.json
+          subPath: credentials.json
 
         livenessProbe:
-
           httpGet:
             path: /healthz
             port: {{ .Values.service.port }}
-
           initialDelaySeconds: 15
           periodSeconds: 10
 
-
         readinessProbe:
-
           httpGet:
             path: /healthz
             port: {{ .Values.service.port }}
-
           initialDelaySeconds: 5
           periodSeconds: 5
+
+      volumes:
+      - name: google-credentials
+        secret:
+          secretName: google-credentials
