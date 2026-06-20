@@ -19,9 +19,10 @@ env:
   corsOrigin: "http://localhost:3000"
 
 
+
 secret:
   appSecrets:
-    jwtSecret: "6S9WSGui7bE1im3XRvB/UqYq9Ya38hpkgCrM80lpgGU="
+    jwtSecret: "NzZmOTU5N2FkODg0YTIwZTUzM2JjYzJkOGFjNzk1MTY2ODMyYzQzMDAwOGY3ZWQxM2RmNWYwODllYzNiOWVhYg=="
 
   mongoSecrets:
     uriSecretName: mongo-secret
