@@ -53,7 +53,7 @@ spec:
 
         volumeMounts:
         - name: google-credentials
-          mountPath: /app/credentials.json
+          mountPath: /app/secrets/credentials.json
           subPath: credentials.json
 
         livenessProbe:
