@@ -4,43 +4,33 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 public class EmailMessageUtil {
-
-    // ✅ OLD METHOD (kept for backward compatibility)
     public static String buildStatusMessage(String name, String status) {
         return buildStatusMessage(name, status, null);
     }
 
-    // ✅ UPDATED METHOD (NOW SUPPORTS INTERVIEW LINK)
     public static String buildStatusMessage(String name, String status, String interviewLink) {
-
         if ("Shortlisted".equalsIgnoreCase(status)) {
-
-            // 🔥 If interview link is available → include it
             if (interviewLink != null && !interviewLink.isEmpty()) {
-
                 return "Hi " + name + ",\n\n"
                         + "🎉 Congratulations!\n"
                         + "You have been shortlisted for the interview.\n\n"
 
                         + "👉 Please join your virtual interview using the link below:\n\n"
                         + interviewLink + "\n\n"
-
                         + "⏰ Important Instructions:\n"
                         + "- Please join at the scheduled time\n"
                         + "- Allow camera & microphone access\n"
                         + "- Ensure stable internet connection\n\n"
-
                         + "We wish you all the best!\n\n"
                         + "Best Regards,\nHR Team";
             }
-
-            // 🔥 Fallback (if link not passed)
             return "Hi " + name + ",\n\n"
                     + "🎉 Congratulations!\n"
                     + "You have been shortlisted for the interview.\n\n"
                     + "Our team will contact you soon with further details.\n\n"
                     + "Best Regards,\nHR Team";
         }
+
 
         else if ("Rejected".equalsIgnoreCase(status)) {
             return "Hi " + name + ",\n\n"
@@ -57,8 +47,6 @@ public class EmailMessageUtil {
                     + "Best Regards,\nHR Team";
         }
     }
-
-    // 🔥 EXISTING METHOD (UNCHANGED)
     public static String skillExpNotMatchMessage(String name) {
 
         return "Hi " + name + ",\n\n"
@@ -70,7 +58,6 @@ public class EmailMessageUtil {
                 + "Best Regards,\nHR Team";
     }
 
-    // 🔥 KEEP (optional if you still use test)
     public static String buildResultMessage(String name,
                                             int score,
                                             int total,
@@ -82,14 +69,12 @@ public class EmailMessageUtil {
 
         message.append("Hi ").append(name).append(",\n\n")
                 .append("Your test has been successfully evaluated.\n\n")
-
                 .append("📊 Test Result Summary:\n")
                 .append("- Score: ").append(score).append(" / ").append(total).append("\n")
                 .append("- Percentage: ").append(percentage).append("%\n")
                 .append("- Rank: ").append(rank).append("\n")
                 .append("- Status: ").append(status).append("\n\n");
 
-        // ⭐ NEW BLOCK FOR TOP PERFORMER
         if ("TOP_PERFORMER".equalsIgnoreCase(status)) {
 
             message.append("🏆 Outstanding Performance!\n\n")
@@ -101,7 +86,7 @@ public class EmailMessageUtil {
                     .append("Stay tuned for further communication.\n");
 
         }
-        // ✅ PASS (normal)
+
         else if ("PASS".equalsIgnoreCase(status)) {
 
             message.append("🎉 Congratulations! You have successfully cleared the test.\n\n")
@@ -111,14 +96,13 @@ public class EmailMessageUtil {
                     .append("Please keep an eye on your email for further communication.\n");
 
         }
-        // ⚠️ REVIEW
+
         else if ("REVIEW".equalsIgnoreCase(status)) {
 
             message.append("👍 Good effort! Your performance is currently under review.\n\n")
                     .append("Our team will evaluate your results and get back to you soon with the next steps.\n");
 
         }
-        // ❌ FAIL
         else {
 
             message.append("We appreciate your time and effort in completing the test.\n\n")
@@ -142,29 +126,114 @@ public class EmailMessageUtil {
                 +"Regards,\n"
                 +"AI Recruitment Team";
     }
+    public static String buildInterviewerNotificationMessage(
+            String candidateName,
+            String role,
+            String meetLink,
+            LocalDateTime time) {
 
-    public static String buildHRNotificationMessage(String candidateName, String role, String meetLink, LocalDateTime time){
+        String feedbackLink = "http://localhost:4200/interviewFeedback";
 
-        return "Dear HR,\n\n"
-                +"A candidate has been shortlisted.\n\n"
-                +"Name: "+candidateName+"\n"
-                +"Role: "+role+"\n"
-                +"Interview Time: "+time+"\n\n"
-                +"Join Interview:\n"
-                +meetLink+"\n\n"
-                +"Please take the interview.\n\n"
-                +"AI Recruiter System";
-    }
+        return """
+        <!DOCTYPE html>
+        <html>
+        <body style="font-family:Arial,sans-serif;color:#333;line-height:1.6;">
 
-    public static String buildInterviewerNotificationMessage(String candidateName,String role,String meetLink,LocalDateTime time){
+            <h2 style="color:#2E86DE;">
+                 Interview Assignment
+            </h2>
 
-        return "Hello,\n\n"
-                +"You have been assigned an interview.\n\n"
-                +"Candidate: "+candidateName+"\n"
-                +"Role: "+role+"\n"
-                +"Time: "+time+"\n"
-                +"Meet Link: "+meetLink+"\n\n"
-                +"Thanks";
+            <p>Dear Interviewer,</p>
+
+            <p>
+                You have been assigned to conduct an interview for the following candidate.
+            </p>
+
+            <table style="border-collapse:collapse;">
+                <tr>
+                    <td><strong>Candidate Name</strong></td>
+                    <td>: %s</td>
+                </tr>
+                <tr>
+                    <td><strong>Role</strong></td>
+                    <td>: %s</td>
+                </tr>
+                <tr>
+                    <td><strong>Interview Time</strong></td>
+                    <td>: %s</td>
+                </tr>
+            </table>
+
+            <br>
+
+            <a href="%s"
+               style="
+                    background:#28a745;
+                    color:#fff;
+                    text-decoration:none;
+                    padding:10px 18px;
+                    border-radius:5px;
+                    font-size:14px;
+                    font-weight:600;
+                    display:inline-block;">
+                🎥 Join Meeting
+            </a>
+
+            &nbsp;&nbsp;
+
+            <a href="%s"
+               style="
+                    background:#007BFF;
+                    color:#fff;
+                    text-decoration:none;
+                    padding:10px 18px;
+                    border-radius:5px;
+                    font-size:14px;
+                    font-weight:600;
+                    display:inline-block;">
+                📝 Submit Feedback
+            </a>
+
+            <br><br>
+
+            <p>
+                Please complete the interview and submit your feedback immediately after the interview.
+            </p>
+
+            <hr>
+
+            <p style="font-size:13px;color:#666;">
+                If the buttons don't work, use the links below:
+            </p>
+
+            <p>
+                <strong>Meeting:</strong><br>
+                %s
+            </p>
+
+            <p>
+                <strong>Feedback:</strong><br>
+                %s
+            </p>
+
+            <br>
+
+            <p>
+                Regards,<br>
+                <strong>AI Recruitment Team</strong>
+            </p>
+
+        </body>
+        </html>
+        """.formatted(
+                candidateName,
+                role,
+                time,
+                meetLink,
+                feedbackLink,
+                meetLink,
+                feedbackLink
+        );
     }
 
     public static String buildPanelSlotSelectionMessage(String to,String panelName,String panelPassword,String candidateName,String role){
@@ -183,56 +252,238 @@ public class EmailMessageUtil {
                 +"AI Recruitment Team";
     }
 
-    public static String buildOfferEmailBody(String name,String url){
+    public static String buildOfferEmailBody(String candidateName, String offerUrl) {
 
-        return "Dear "+name+",\n\n"
-                +"We are pleased to inform you that your offer letter has been generated.\n\n"
-                +"Download Offer Letter:\n"
-                +url+"\n\n"
-                +"Best Regards,\n"
-                +"HR Team";
+        return """
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Offer Letter</title>
+</head>
+
+<body style="margin:0;padding:30px;background:#f4f6f9;font-family:Arial,Helvetica,sans-serif;">
+
+<table width="100%%" cellpadding="0" cellspacing="0" style="background:#f4f6f9;">
+<tr>
+<td align="center">
+
+<table width="650" cellpadding="0" cellspacing="0"
+style="background:#ffffff;border-radius:10px;overflow:hidden;box-shadow:0 4px 15px rgba(0,0,0,.1);">
+
+<tr>
+<td style="background:#0d6efd;padding:25px;text-align:center;color:#ffffff;">
+
+<h1 style="margin:0;">HG Infotech</h1>
+
+<p style="margin-top:10px;font-size:16px;">
+Offer Letter Notification
+</p>
+
+</td>
+</tr>
+
+<tr>
+<td style="padding:40px;">
+
+<p style="font-size:16px;">
+Dear <strong>%s</strong>,
+</p>
+
+<p style="font-size:15px;line-height:28px;color:#555;">
+Congratulations!
+<br><br>
+
+We are delighted to inform you that you have successfully completed our recruitment process.
+
+We are pleased to extend an employment offer to you.
+
+<b>Your Offer Letter has been attached to this email as a PDF.</b>
+
+You may also view your offer letter online by clicking the button below.
+</p>
+
+<div style="text-align:center;margin:40px 0;">
+
+<a href="%s"
+style="
+background:#0d6efd;
+color:#ffffff;
+padding:15px 35px;
+text-decoration:none;
+font-size:16px;
+font-weight:bold;
+border-radius:6px;
+display:inline-block;">
+
+View Offer Letter
+
+</a>
+
+</div>
+
+<p style="font-size:14px;color:#666;">
+If the button doesn't work, copy and paste the following link into your browser:
+</p>
+
+<p style="word-break:break-all;">
+<a href="%s">%s</a>
+</p>
+
+<hr style="margin:35px 0;border:none;border-top:1px solid #ddd;">
+
+<p style="font-size:14px;color:#666;line-height:24px;">
+We are excited to have you join the HG Infotech family.
+
+Please review the attached Offer Letter carefully and complete the required response at your earliest convenience.
+
+If you have any questions, feel free to contact our HR team.
+</p>
+
+<p style="margin-top:35px;">
+Regards,<br><br>
+
+<strong>Human Resources</strong><br>
+HG Infotech
+</p>
+
+</td>
+</tr>
+
+</table>
+
+</td>
+</tr>
+</table>
+
+</body>
+</html>
+""".formatted(candidateName, offerUrl, offerUrl, offerUrl);
+    }       public static String buildTestLinkMessage(String testLink) {
+        return """
+            <html>
+            <body style="font-family: Arial, sans-serif; background-color: #f4f6f8; margin: 0; padding: 0;">
+                <div style="max-width: 600px; margin: 30px auto; background: #ffffff; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
+                    
+                    <div style="background: #1f3c88; color: #ffffff; padding: 20px; text-align: center;">
+                        <h2 style="margin: 0;">Online Test Invitation</h2>
+                    </div>
+
+                    <div style="padding: 30px; color: #333333; line-height: 1.6;">
+                        <p>Dear Candidate,</p>
+
+                        <p>
+                            You have been invited to complete an online assessment as part of our recruitment process.
+                            Please click the button below to begin your test.
+                        </p>
+
+                        <div style="text-align: center; margin: 30px 0;">
+                            <a href="%s"
+                               style="background-color: #1f3c88; color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-size: 16px; font-weight: bold; display: inline-block;">
+                                Start Test
+                            </a>
+                        </div>
+
+                        <p>
+                            Please ensure you complete the assessment within the given time frame and use a stable internet connection.
+                        </p>
+
+                        <p>If you face any issues accessing the test, please contact the recruitment team.</p>
+
+                        <p>Best regards,<br>
+                        Recruitment Team</p>
+                    </div>
+                </div>
+            </body>
+            </html>
+            """.formatted(testLink);
     }
 
-    public static String buildTestLinkMessage(String testLink){
+    public static String buildCandidateSlotSelectionMessage(
+            String candidateName,
+            String role,
+            List<String> freeSlots,
+            String accessToken) {
 
-        return "Dear Candidate,\n\n"
-                +"Congratulations! You have been shortlisted.\n\n"
-                +"Complete your online assessment using the link below:\n\n"
-                +testLink+"\n\n"
-                +"This link is valid for 48 hours.\n\n"
-                +"Best Regards,\n"
-                +"HR Team";
-    }
+        String slotLink = "http://localhost:4200/slots?token=" + accessToken;
 
-    public static String buildCandidateSlotSelectionMessage(String candidateName, String role, List<String> freeSlots, String accessToken){
+        StringBuilder slots = new StringBuilder();
 
-        StringBuilder body=new StringBuilder();
+        for (String slot : freeSlots) {
+            slots.append("<li>")
+                    .append(slot)
+                    .append("</li>");
+        }
 
-        body.append("Hello ")
-                .append(candidateName)
-                .append(",\n\n")
-                .append("Congratulations!\n")
-                .append("You have been shortlisted for the role: ")
-                .append(role)
-                .append("\n\n")
-                .append("Available Interview Slots:\n\n");
+        return """
+        <!DOCTYPE html>
+        <html>
+        <body style="font-family:Arial,sans-serif;color:#333;line-height:1.6;">
 
-        freeSlots.forEach(slot->
-                body.append("• ")
-                        .append(slot)
-                        .append("\n")
+            <h2 style="color:#2E86DE;">
+                🎉 Congratulations!
+            </h2>
+
+            <p>Dear <strong>%s</strong>,</p>
+
+            <p>
+                We are pleased to inform you that you have been
+                <strong>shortlisted</strong> for the position of
+                <strong>%s</strong>.
+            </p>
+
+            <p>
+                Please choose one of the available interview slots below.
+            </p>
+            <h3>Available Interview Slots</h3>
+            <ul>
+                %s
+            </ul>
+            <br>
+            <a href="%s"
+                           style="
+                                background-color:#007BFF;
+                                color:#ffffff;
+                                text-decoration:none;
+                                padding:10px 18px;
+                                border-radius:5px;
+                                font-size:14px;
+                                font-weight:600;
+                                display:inline-block;
+                                font-family:Arial,sans-serif;">
+                            📅 Select Interview Slot
+                        </a>
+
+            <br><br>
+
+            <p>
+                <strong>Note:</strong> This link will expire in <strong>24 hours</strong>.
+            </p>
+
+            <p>
+                If the button doesn't work, copy and paste the following URL into your browser:
+            </p>
+
+            <p style="word-break:break-all;">
+                %s
+            </p>
+
+            <br>
+
+            <p>
+                Regards,<br>
+                <strong>AI Recruitment Team</strong>
+            </p>
+
+        </body>
+        </html>
+        """.formatted(
+                candidateName,
+                role,
+                slots.toString(),
+                slotLink,
+                slotLink
         );
-
-        body.append("\n")
-                .append("Select your preferred slot:\n\n")
-                .append("http://localhost:4200/slots?token=")
-                .append(accessToken)
-                .append("\n\n")
-                .append("This link expires in 24 hours.\n\n")
-                .append("Regards,\n")
-                .append("AI Recruitment Team");
-
-        return body.toString();
     }
 
     public static final String HR_OFFER_ACCEPTED_SUBJECT =
@@ -247,8 +498,6 @@ public class EmailMessageUtil {
                     + "Regards,\n"
                     + "AI Recruitment System";
 
-    // OFFER REJECTED
-
     public static final String HR_OFFER_REJECTED_SUBJECT =
             "Candidate Rejected Offer Letter";
 
@@ -261,8 +510,6 @@ public class EmailMessageUtil {
                     + "Please review recruitment status.\n\n"
                     + "Regards,\n"
                     + "AI Recruitment System";
-
-    // CANDIDATE OFFER ACCEPTED
 
     public static final String CANDIDATE_OFFER_ACCEPTED_SUBJECT =
             "Welcome Onboard";
@@ -278,12 +525,12 @@ public class EmailMessageUtil {
                     + "- Aadhaar Card\n"
                     + "- PAN Card\n"
                     + "- Resume\n"
-                    + "- Education Certificates\n"
-                    + "- Experience Certificates\n\n"
+                    + "- offer letter\n"
+                    + "- Releaving letter\n\n"
+                    + "-3Month Salary slip"
                     + "Regards,\n"
                     + "HR Team";
 
-    // CANDIDATE OFFER REJECTED
 
     public static final String CANDIDATE_OFFER_REJECTED_SUBJECT =
             "Offer Response Confirmation";
@@ -297,11 +544,8 @@ public class EmailMessageUtil {
                     + "Regards,\n"
                     + "HR Team";
 
-    // DOCUMENT UPLOAD
-
     public static final String DOCUMENT_UPLOADED_SUBJECT =
             "Candidate Uploaded Onboarding Documents";
-
     public static final String DOCUMENT_UPLOADED_BODY =
             "Hello HR Team,\n\n"
                     + "Candidate has uploaded onboarding documents.\n\n"
@@ -311,11 +555,8 @@ public class EmailMessageUtil {
                     + "Regards,\n"
                     + "AI Recruitment System";
 
-    // DOCUMENT REJECTED
-
     public static final String DOCUMENT_REJECTED_SUBJECT =
             "Document Verification Failed";
-
     public static final String DOCUMENT_REJECTED_BODY =
             "Hello %s,\n\n"
                     + "Your uploaded onboarding document could not be verified.\n\n"
@@ -325,8 +566,6 @@ public class EmailMessageUtil {
                     + "If you have any questions, please contact the HR team.\n\n"
                     + "Regards,\n"
                     + "HR Team";
-
-    // ALL DOCUMENT VERIFIED
 
     public static final String ALL_DOCUMENT_VERIFIED_SUBJECT =
             "All Documents Verified Successfully";
@@ -338,8 +577,6 @@ public class EmailMessageUtil {
                     + "HR team will shortly share your joining instructions and employee details.\n\n"
                     + "Regards,\n"
                     + "HR Team";
-
-    // EMPLOYEE CREDENTIALS
 
     public static final String EMPLOYEE_CREDENTIALS_SUBJECT =
             "Welcome To The Company";
@@ -359,4 +596,123 @@ public class EmailMessageUtil {
                     + "Welcome aboard!\n\n"
                     + "Regards,\n"
                     + "HR Team";
+
+    public static String buildCandidateOfferAcceptedBody(
+            String candidateName,
+            String uploadUrl
+    ) {
+
+        return """
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+</head>
+
+<body style="margin:0;padding:30px;background:#f4f6f9;font-family:Arial,Helvetica,sans-serif;">
+
+<table width="100%%" cellpadding="0" cellspacing="0">
+<tr>
+<td align="center">
+
+<table width="650" cellpadding="0" cellspacing="0"
+style="background:#ffffff;border-radius:10px;overflow:hidden;
+box-shadow:0 3px 12px rgba(0,0,0,.12);">
+
+<tr>
+<td style="background:#198754;color:white;padding:25px;text-align:center;">
+
+<h2 style="margin:0;">Welcome to HG Infotech</h2>
+
+<p style="margin-top:10px;">
+Your Onboarding Journey Begins
+</p>
+
+</td>
+</tr>
+
+<tr>
+<td style="padding:40px;">
+
+<p>Dear <strong>%s</strong>,</p>
+
+<p style="line-height:28px;color:#555;">
+
+Congratulations!
+
+We are delighted to welcome you to <strong>HG Infotech</strong>.
+
+Thank you for accepting our employment offer. Your onboarding process has now officially begun.
+
+To proceed with the next step, please upload the required onboarding documents by clicking the button below.
+
+</p>
+
+<div style="text-align:center;margin:35px 0;">
+
+<a href="%s"
+style="
+background:#198754;
+color:white;
+padding:15px 35px;
+text-decoration:none;
+border-radius:6px;
+font-weight:bold;
+display:inline-block;">
+
+Upload Documents
+
+</a>
+
+</div>
+
+<p style="font-weight:bold;">Required Documents</p>
+
+<ul style="line-height:28px;color:#555;">
+<li>Aadhaar Card</li>
+<li>PAN Card</li>
+<li>Updated Resume</li>
+<li>Signed Offer Letter</li>
+<li>Relieving Letter (if applicable)</li>
+<li>Last 3 Months' Salary Slips (if applicable)</li>
+</ul>
+<p style="color:#666;">
+If the button above doesn't work, copy and paste the following link into your browser:
+</p>
+<p style="word-break:break-all;">
+<a href="%s">%s</a>
+</p>
+
+<hr style="margin:35px 0;border:none;border-top:1px solid #ddd;">
+<p style="color:#666;line-height:24px;">
+Please upload all required documents as soon as possible to avoid any delay in your onboarding process.
+If you have any questions, feel free to contact the HR team.
+
+</p>
+
+<p>
+
+Best Regards,<br>
+<strong>Human Resources</strong><br>
+HG Infotech
+</p>
+</td>
+</tr>
+</table>
+</td>
+</tr>
+</table>
+</body>
+</html>
+""".formatted(
+                candidateName,
+                uploadUrl,
+                uploadUrl,
+                uploadUrl
+        );
+    }
+
+    private static String urlEncode(String value) {
+        return java.net.URLEncoder.encode(value, java.nio.charset.StandardCharsets.UTF_8);
+    }
 }

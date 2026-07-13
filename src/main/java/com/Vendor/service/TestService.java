@@ -1,10 +1,7 @@
 package com.Vendor.service;
 import com.Vendor.dto.*;
 import com.Vendor.model.*;
-import com.Vendor.repository.CandidateRepository;
-import com.Vendor.repository.QuestionRepository;
-import com.Vendor.repository.ResultRepository;
-import com.Vendor.repository.TestLinkRepository;
+import com.Vendor.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -27,6 +24,7 @@ public class TestService {
     private final CandidateRepository candidateRepository;
     private final ResultRepository resultRepository;
     private final PanelService panelService;
+    private  final TestViolationRepository violationRepository;
 
     @Value("${app.interview.base-url}")
     private String testBaseUrl;
@@ -44,6 +42,7 @@ public class TestService {
 
             if (existing.isPresent()) {
                 TestLink link = existing.get();
+
 
                 if (!link.isAttempted()
                         && link.getExpiryTime().isAfter(LocalDateTime.now())) {
@@ -79,7 +78,6 @@ public class TestService {
         }
     }
 
-
     public ValidateResponseDTO validateToken(String token) {
 
         try {
@@ -107,17 +105,15 @@ public class TestService {
                         .message("Link expired")
                         .build();
             }
-
             if (link.getStartTime() == null) {
                 link.setStartTime(System.currentTimeMillis());
                 repository.save(link);
             }
-
             return ValidateResponseDTO.builder()
                     .valid(true)
                     .candidateId(link.getCandidateId())
                     .testId(link.getTestId())
-                    .duration(30)
+                    .duration(5)
                     .build();
 
         } catch (Exception e) {
@@ -126,7 +122,6 @@ public class TestService {
             throw new RuntimeException("Token validation failed");
         }
     }
-
     @Transactional
     public TestResultResponse evaluateTest(TestSubmissionRequest request){
 
@@ -317,11 +312,9 @@ public class TestService {
                         : "Candidate";  // fallback
 
                 System.out.println("👤 Candidate Name: " + name);
-
-                // USE REAL NAME HERE
                 emailService.sendResultEmail(
                         emailTo,
-                        name,   // 🔥 FIXED
+                        name,
                         score,
                         total,
                         percentage,
@@ -382,7 +375,7 @@ public class TestService {
     }
     public List<TestResult> getAllRankedCandidates() {
 
-        // STEP 1: Fetch all results
+
         List<TestResult> results = resultRepository.findAll();
 
         if (results.isEmpty()) {
@@ -395,11 +388,8 @@ public class TestService {
                         .thenComparingLong(TestResult::getTimeTaken)
         );
 
-
         int rank = 1;
-
         for (int i = 0; i < results.size(); i++) {
-
             if (i > 0) {
                 TestResult prev = results.get(i - 1);
                 TestResult curr = results.get(i);
@@ -412,13 +402,78 @@ public class TestService {
                     rank = i + 1;
                 }
             }
-
             results.get(i).setRank(rank);
         }
-
-        //  STEP 4: Persist ranks (optional but recommended)
         resultRepository.saveAll(results);
 
         return results;
     }
-}
+    public ViolationResponse recordViolation(ViolationRequest request) {
+        TestLink link = repository
+                .findByToken(request.getToken())
+                .orElseThrow(() ->
+                        new RuntimeException("Invalid Token"));
+        if (link.isAttempted()) {
+            return ViolationResponse.builder()
+                    .warningCount(4)
+                    .blocked(true)
+                    .message("Assessment already blocked")
+                    .build();
+        }
+        Candidate candidate = candidateRepository
+                .findById(link.getCandidateId())
+                .orElse(null);
+
+        if (candidate != null &&
+                "TEST_DISQUALIFIED".equals(candidate.getStatus())) {
+
+            return ViolationResponse.builder()
+                    .warningCount(4)
+                    .blocked(true)
+                    .message("Assessment already blocked")
+                    .build();
+        }
+        long existingWarnings =
+                violationRepository.countByToken(request.getToken());
+
+        int warningCount = (int) existingWarnings + 1;
+
+        TestViolation violation =
+                TestViolation.builder()
+                        .candidateId(link.getCandidateId())
+                        .token(link.getToken())
+                        .violationType(request.getViolationType())
+                        .warningCount(warningCount)
+                        .timestamp(LocalDateTime.now())
+                        .build();
+
+        violationRepository.save(violation);
+        if (warningCount >= 4) {
+            if (candidate != null) {
+                candidate.setStatus("TEST_DISQUALIFIED");
+                candidateRepository.save(candidate);
+            }
+            link.setAttempted(true);
+            repository.save(link);
+            return ViolationResponse.builder()
+                    .warningCount(warningCount)
+                    .blocked(true)
+                    .message("Assessment Blocked")
+                    .build();
+        }
+
+        String message;
+        if (warningCount == 1) {
+            message = "Warning 1/3";
+        } else if (warningCount == 2) {
+            message = "Warning 2/3";
+        } else {
+            message = "Final Warning. Next violation will block the assessment.";
+        }
+
+        return ViolationResponse.builder()
+                .warningCount(warningCount)
+                .blocked(false)
+                .message(message)
+                .build();
+    }}

@@ -27,6 +27,7 @@ public class JobService {
                 .description(request.getDescription())
                 .skills(request.getSkills())
                 .location(request.getLocation())
+                .budget(request.getBudget())
                 .build();
 
         Job savedJob = jobRepository.save(job);
@@ -86,5 +87,8 @@ public class JobService {
                         new RuntimeException("Job not found with id: " + id));
 
         jobRepository.delete(job);
+    }
+    public long getOpenPositionsCount() {
+        return jobRepository.count();
     }
 }

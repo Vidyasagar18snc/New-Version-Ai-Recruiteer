@@ -10,14 +10,14 @@ import java.util.Optional;
 public interface KnowledgeTransferRepository
         extends MongoRepository<KnowledgeTransfer,String> {
 
-    List<KnowledgeTransfer>
 
-    findByEmployeeId(
-            String employeeId
-    );
     Optional<KnowledgeTransfer>
-
     findTopByEmployeeIdOrderByKtDateDesc(
             String employeeId
     );
+
+    List<KnowledgeTransfer> findAllByEmployeeId(
+            String employeeId
+    );
+
 }

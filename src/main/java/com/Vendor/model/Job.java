@@ -21,4 +21,5 @@ public class Job {
     private List<String> skills;
     private String location;
     private String description;
+    private String budget;
 }

@@ -13,7 +13,6 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api")
-@CrossOrigin(origins = "http://localhost:4200")
 @RequiredArgsConstructor
 public class JobController {
 
@@ -62,5 +61,11 @@ public class JobController {
         jobService.deleteById(id);
 
         return ResponseEntity.ok("Job deleted successfully");
+    }
+    @GetMapping("/open-positions/count")
+    public ResponseEntity<Long> getOpenPositionsCount() {
+        return ResponseEntity.ok(
+                jobService.getOpenPositionsCount()
+        );
     }
 }

@@ -22,4 +22,5 @@ public interface CandidateRepository extends MongoRepository<Candidate, String> 
     boolean existsByEmail(String email);
 
     List<Candidate> findByName(String name);
+    long countByStatus(String status);
 }

@@ -24,12 +24,14 @@ public class JDParsingService {
         int experience = extractExperience(jdText);
         List<String> skills = extractSkills(jdText);
         String location = extractLocation(jdText);
+        String budget = extractBudget(jdText);
 
         return Job.builder()
                 .title(title)
                 .experience(experience)
                 .skills(skills)
                 .location(location)
+                . budget(budget)
                 .description(jdText)
                 .build();
     }
@@ -137,6 +139,26 @@ public class JDParsingService {
 
         if (matcher.find()) {
             return matcher.group(1).trim();
+        }
+
+        return "Not specified";
+    }
+    private String extractBudget(String text) {
+
+        Pattern[] patterns = {
+                Pattern.compile("budget\\s*[:\\-]?\\s*(.+)", Pattern.CASE_INSENSITIVE),
+                Pattern.compile("salary\\s*[:\\-]?\\s*(.+)", Pattern.CASE_INSENSITIVE),
+                Pattern.compile("ctc\\s*[:\\-]?\\s*(.+)", Pattern.CASE_INSENSITIVE),
+                Pattern.compile("(\\d+\\s*[-–]\\s*\\d+\\s*(LPA|Lakhs|Lakh))", Pattern.CASE_INSENSITIVE),
+                Pattern.compile("(₹\\s*\\d+\\s*[-–]\\s*₹?\\s*\\d+\\s*(LPA|Lakhs|Lakh)?)", Pattern.CASE_INSENSITIVE)
+        };
+
+        for (Pattern pattern : patterns) {
+            Matcher matcher = pattern.matcher(text);
+
+            if (matcher.find()) {
+                return matcher.group(1).trim();
+            }
         }
 
         return "Not specified";

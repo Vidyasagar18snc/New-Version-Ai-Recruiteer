@@ -6,6 +6,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.stereotype.Indexed;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Data
 @NoArgsConstructor
@@ -20,6 +21,7 @@ public class Employee {
     private String id;
 
     private String employeeId;
+    private String employmentType;
 
     private String employeeName;
 
@@ -37,5 +39,7 @@ public class Employee {
 
     private String password;
     private Boolean firstLogin = true;
+    private String resetOtp;
+    private LocalDateTime otpExpiryTime;
 
 }

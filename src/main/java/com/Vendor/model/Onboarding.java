@@ -2,6 +2,7 @@ package com.Vendor.model;
 
 import com.Vendor.dto.DocumentInfo;
 import lombok.Data;
+import org.apache.poi.hslf.record.CString;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
@@ -16,7 +17,7 @@ public class Onboarding {
     private String id;
 
     private String candidateId;
-
+    private String employmentType;
     private String candidateName;
 
     private String email;
@@ -37,4 +38,9 @@ public class Onboarding {
 
     private LocalDateTime createdAt;
     private List<DocumentInfo> documents;
+    private String previousCompanyHrEmail;
+    private String backgroundVerificationStatus;
+    private LocalDateTime verificationMailSentAt;
+    private String verificationRemarks;
+    private CString Experience;
 }

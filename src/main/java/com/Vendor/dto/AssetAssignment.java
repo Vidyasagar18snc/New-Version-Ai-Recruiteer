@@ -7,6 +7,7 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @Data
 
@@ -36,6 +37,7 @@ public class AssetAssignment {
 
     private String remarks;
 
-    private String location;
+    private String assetType;
+    private String accessories;
 
 }

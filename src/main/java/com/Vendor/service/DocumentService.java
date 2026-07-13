@@ -45,7 +45,19 @@ public class DocumentService {
 
         for (MultipartFile file : files) {
 
-            // Generate File Name
+            // Validate File Type
+            String contentType = file.getContentType();
+
+            if (contentType == null ||
+                    !(contentType.equals("application/pdf")
+                            || contentType.startsWith("image/"))) {
+
+                throw new RuntimeException(
+                        "Only PDF, JPG, JPEG and PNG files are allowed"
+                );
+            }
+
+            // Generate S3 File Name
             String fileName = "onboarding/"
                     + candidateId
                     + "/"
@@ -54,18 +66,52 @@ public class DocumentService {
                     + file.getOriginalFilename();
 
             // Upload To S3
-            s3Service.uploadFile(file.getBytes(), fileName);
+            s3Service.uploadFile(
+                    file.getBytes(),
+                    fileName,
+                    contentType
+            );
 
-            // OCR Scan
-            OCRResult result = ocrService.scanDocument(file);
+            OCRResult result;
+
+            try {
+
+                result = ocrService.scanDocument(file);
+
+            } catch (Exception ex) {
+
+                System.out.println(
+                        "OCR Failed : " + ex.getMessage()
+                );
+
+                result = new OCRResult();
+
+                result.setDocumentType("UNKNOWN");
+                result.setStatus("PENDING");
+            }
 
             // Create Document Info
             DocumentInfo document = new DocumentInfo();
-            document.setDocumentType(result.getDocumentType());
-            document.setFileName(file.getOriginalFilename());
-            document.setS3Key(fileName);
-            document.setVerificationStatus("PENDING");
-            document.setUploadedAt(LocalDateTime.now());
+
+            document.setDocumentType(
+                    result.getDocumentType()
+            );
+
+            document.setFileName(
+                    file.getOriginalFilename()
+            );
+
+            document.setS3Key(
+                    fileName
+            );
+
+            document.setVerificationStatus(
+                    "PENDING"
+            );
+
+            document.setUploadedAt(
+                    LocalDateTime.now()
+            );
 
             documentList.add(document);
         }
@@ -188,7 +234,6 @@ public class DocumentService {
                     document.setVerificationRemarks(
                             "OCR verification successful"
                     );
-
                 } else {
 
                     allVerified = false;
@@ -196,7 +241,6 @@ public class DocumentService {
                     document.setVerificationStatus(
                             "REJECTED"
                     );
-
                     document.setVerificationRemarks(
                             "Invalid or unclear document"
                     );

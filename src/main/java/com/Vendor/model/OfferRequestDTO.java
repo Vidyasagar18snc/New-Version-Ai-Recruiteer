@@ -44,6 +44,14 @@ public class OfferRequestDTO {
     private String hrSignatoryTitle;
 
     // NEW FIELDS
+    private String candidatePhone;
+    private String reportingManager;
+    private String probationPeriod;
+    private String noticePeriod;
+    private String offerValidity;
+    private String additionalNotes;
+    private String payFrequency;
+    private String currency;
 
     private String offerPdfUrl;
 

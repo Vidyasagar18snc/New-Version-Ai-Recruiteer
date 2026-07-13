@@ -48,6 +48,20 @@ public class AvailabilityService {
                             .query(request)
                             .execute();
 
+            if (panelEmail == null || panelEmail.isBlank()) {
+                throw new RuntimeException(
+                        "Panel email is not assigned"
+                );
+            }
+
+            if (response.getCalendars() == null
+                    || response.getCalendars().get(panelEmail) == null) {
+
+                throw new RuntimeException(
+                        "Unable to fetch calendar for panel: " + panelEmail
+                );
+            }
+
             List<TimePeriod> busySlots =
                     response.getCalendars()
                             .get(panelEmail)

@@ -10,19 +10,17 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/test")
-@CrossOrigin(origins = "http://localhost:4200")
 @RequiredArgsConstructor
 public class QuestionController {
 
     private final QuestionService questionService;
 
-    // ✅ GET QUESTIONS (USED BY ANGULAR)
     @GetMapping("/questions")
     public List<QuestionDTO> getQuestions() {
         return questionService.getAllQuestions();
     }
 
-    // ✅ ADD QUESTION (ADMIN USE)
+
     @PostMapping("/add")
     public Question addQuestion(@RequestBody Question question) {
         return questionService.addQuestion(question);

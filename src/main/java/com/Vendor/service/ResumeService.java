@@ -1,8 +1,8 @@
-
 package com.Vendor.service;
 
 import com.Vendor.dto.CandidateAccessToken;
 import com.Vendor.dto.GenerateLinkRequestDTO;
+import com.Vendor.dto.UpdateCandidateRequest;
 import com.Vendor.model.*;
 import com.Vendor.repository.CandidateAccessTokenRepository;
 import com.Vendor.repository.CandidateRepository;
@@ -14,8 +14,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -24,7 +29,8 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class ResumeService {
-    private final CandidateRepository candidateRepository;
+    private static final DateTimeFormatter APPLIED_DATE_FORMAT =
+            DateTimeFormatter.ofPattern("EEE, MMM dd, yyyy HH:mm", Locale.ENGLISH);    private final CandidateRepository candidateRepository;
     private final JobService jobService;
     private final EmailService emailService;
     private final TestService testService;
@@ -34,39 +40,33 @@ public class ResumeService {
     private final CandidateAccessTokenRepository tokenRepository;
     @Value("${app.hr.email}")
     private String hrEmail;
+    @Value("${app.fresher.max-experience:0.5}")
+    private double fresherMaxExperience;
 
     public CandidateResponse processResume(MultipartFile file, String roleFromHR) {
-        String resumeText =
-                extractText(file);
+        String savedResumeFileName = saveResumeFile(file);
+        String resumeText = extractText(file);
+        String email = extractEmail(resumeText);
+        String name = extractName(resumeText);
+        double experience = extractExperience(resumeText);
+        List<String> resumeSkills = extractSkills(resumeText);
 
-        String email =
-                extractEmail(resumeText);
-
-        String name =
-                extractName(resumeText);
-
-        double experience =
-                extractExperience(resumeText);
-
-        List<String> resumeSkills =
-                extractSkills(resumeText);
-
-        Candidate candidate =
-                new Candidate();
+        Candidate candidate = new Candidate();
         candidate.setName(name);
         candidate.setEmail(email);
+        candidate.setResumeUrl(savedResumeFileName);
+
         String role;
         int score = 0;
         String status;
-        List<String> matchedSkills =
-                new ArrayList<>();
 
-        List<String> extraSkills =
-                new ArrayList<>();
-        Job job =
-                jobService.getJobByRole(roleFromHR);
+        List<String> matchedSkills = new ArrayList<>();
+        List<String> extraSkills = new ArrayList<>();
+
+        Job job = jobService.getJobByRole(roleFromHR);
 
         if (job == null) {
+
             role = roleFromHR;
             status = "Rejected";
             extraSkills = resumeSkills;
@@ -76,32 +76,33 @@ public class ResumeService {
             matchedSkills = resumeSkills.stream()
                     .filter(skill ->
                             job.getSkills().stream()
-                                    .anyMatch(jd ->
-                                            jd.equalsIgnoreCase(skill)
-                                    )
-                    )
+                                    .anyMatch(jd -> jd.equalsIgnoreCase(skill)))
                     .collect(Collectors.toList());
+
             extraSkills = resumeSkills.stream()
                     .filter(skill ->
                             job.getSkills().stream()
-                                    .noneMatch(jd ->
-                                            jd.equalsIgnoreCase(skill)
-                                    )
-                    )
+                                    .noneMatch(jd -> jd.equalsIgnoreCase(skill)))
                     .collect(Collectors.toList());
 
-            score = calculateFinalScore(
-                    job,
-                    resumeText
-            );
+            score = calculateFinalScore(job, resumeText);
 
-            status = (score >= 85)
-                    ? "Shortlisted"
-                    : (score >= 70)
-                    ? "Review"
-                    : "Rejected";
+            boolean isFresher = experience <= fresherMaxExperience;
+
+            // UPDATED RULE
+            if (isFresher) {
+                status = score >= 60 ? "Shortlisted" : "Rejected";
+            } else {
+                status = score >= 80
+                        ? "Shortlisted"
+                        : score >= 60
+                          ? "Review"
+                          : "Rejected";
+            }
+
             role = job.getTitle();
         }
+
         candidate.setRole(role);
         candidate.setScore(score);
         candidate.setStatus(status);
@@ -109,40 +110,27 @@ public class ResumeService {
         candidate.setMatchedSkills(matchedSkills);
         candidate.setExtraSkills(extraSkills);
         candidate.setExperience(experience);
+        candidate.setAppliedDate(LocalDateTime.now());
 
-
-// ================= DUPLICATE CHECK =================
-
-// 1. EMAIL CHECK
-
-        // EMAIL CHECK
-
-        if (email != null &&
-                candidateRepository.existsByEmail(email)) {
-
+        // Email duplicate check
+        if (email != null && candidateRepository.existsByEmail(email)) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
                     "Candidate already exists with same email"
             );
         }
 
-
-// NAME + EXPERIENCE + SKILLS CHECK
-
-        List<Candidate> existingCandidates =
-                candidateRepository.findByName(name);
+        // Duplicate resume check
+        List<Candidate> existingCandidates = candidateRepository.findByName(name);
 
         for (Candidate existing : existingCandidates) {
 
-            boolean sameExperience =
-                    existing.getExperience() == experience;
+            boolean sameExperience = existing.getExperience() == experience;
 
-            boolean sameSkills =
-                    existing.getSkills() != null &&
-                            existing.getSkills().containsAll(resumeSkills);
+            boolean sameSkills = existing.getSkills() != null
+                    && existing.getSkills().containsAll(resumeSkills);
 
             if (sameExperience && sameSkills) {
-
                 throw new ResponseStatusException(
                         HttpStatus.BAD_REQUEST,
                         "Duplicate resume detected"
@@ -150,107 +138,80 @@ public class ResumeService {
             }
         }
 
+        candidate = candidateRepository.save(candidate);
 
-// ================= SAVE CANDIDATE =================
-
-        candidate =
-                candidateRepository.save(candidate);
         String panelName = null;
         String panelEmail = null;
-        List<String> freeSlots =
-                new ArrayList<>();
+        List<String> freeSlots = new ArrayList<>();
 
         try {
 
             if (email != null) {
+
                 if ("Rejected".equalsIgnoreCase(status)) {
-                    emailService.sendStatusEmail(
-                            email,
-                            name,
-                            "NOT_MATCH"
-                    );
-                }
-                else if ("Review".equalsIgnoreCase(status)) {
-                    emailService.sendStatusEmail(
-                            email,
-                            name,
-                            "UNDER_REVIEW"
-                    );
-                }
-                else if ("Shortlisted".equalsIgnoreCase(status)) {
-                    if (candidate.getExperience() <= 0.5) {
-                        GenerateLinkRequestDTO request =
-                                new GenerateLinkRequestDTO();
 
-                        request.setCandidateId(
-                                candidate.getId()
-                        );
-                        request.setTestId(
-                                "GENERAL_TEST"
-                        );
-                        String testLink =
-                                testService.generateTestLink(
-                                        request
-                                );
-                        candidate.setInterviewLink(
-                                testLink
-                        );
+                    emailService.sendStatusEmail(email, name, "NOT_MATCH");
+                    System.out.println("📧 Rejection email sent to: " + email);
+
+                } else if ("Review".equalsIgnoreCase(status)) {
+
+                    emailService.sendStatusEmail(email, name, "UNDER_REVIEW");
+                    System.out.println("📧 Under-review email sent to: " + email);
+
+                } else if ("Shortlisted".equalsIgnoreCase(status)) {
+
+                    boolean isFresher = candidate.getExperience() <= fresherMaxExperience;
+
+                    if (isFresher) {
+                        // Fresher → send test link
+                        GenerateLinkRequestDTO request = new GenerateLinkRequestDTO();
+                        request.setCandidateId(candidate.getId());
+                        request.setTestId("GENERAL_TEST");
+
+                        String testLink = testService.generateTestLink(request);
+
+                        candidate.setInterviewLink(testLink);
                         candidateRepository.save(candidate);
-                        emailService.sendTestLink(
-                                email,
-                                testLink
-                        );
-                        System.out.println(
-                                "🧠 Fresher → Test Link Generated"
-                        );
-                    } else {
 
-                        // Assign Panel new Logics
-                        List<Panel> panels =
-                                panelService.assignPanel(role);
+                        emailService.sendTestLink(email, testLink);
+
+                        System.out.println("🧠 Fresher shortlisted → Test Link Generated for: " + email);
+
+                    } else {
+                        // Experienced → assign panel and send slot selection mail
+                        List<Panel> panels = panelService.assignPanel(role);
 
                         if (panels == null || panels.isEmpty()) {
-
-                            throw new RuntimeException(
-                                    "No panel available"
-                            );
+                            throw new RuntimeException("No panel available");
                         }
 
                         Panel panel = panels.get(0);
 
                         panelName = panel.getName();
-
                         panelEmail = panel.getEmail();
                         candidate.setPanelName(panelName);
-
                         candidate.setPanelEmail(panelEmail);
                         candidate.setAssignedPanelId(panel.getId());
+
                         candidateRepository.save(candidate);
-                        // Fetch interviewer free slots
-                        freeSlots =
-                                availabilityService.getFreeSlots(panelEmail, LocalDate.now()
-                                                .plusDays(1)
-                                                .toString()
-                                );
+
+                        freeSlots = availabilityService.getFreeSlots(
+                                panelEmail,
+                                LocalDate.now().plusDays(1).toString()
+                        );
 
                         System.out.println("Free Slots : " + freeSlots);
 
-                        // Generate Secure Token
-                        String accessToken =
-                                UUID.randomUUID().toString();
-
-                        // Save Token
-                        CandidateAccessToken token =
-                                CandidateAccessToken.builder()
-                                        .candidateId(candidate.getId())
-                                        .token(accessToken)
-                                        .expiryTime(LocalDateTime.now().plusHours(24))
-                                        .used(false)
-                                        .build();
+                        String accessToken = UUID.randomUUID().toString();
+                        CandidateAccessToken token = CandidateAccessToken.builder()
+                                .candidateId(candidate.getId())
+                                .token(accessToken)
+                                .expiryTime(LocalDateTime.now().plusHours(24))
+                                .used(false)
+                                .build();
 
                         tokenRepository.save(token);
 
-                        // Send secure slot mail
                         emailService.sendCandidateSlotSelectionMail(
                                 email,
                                 candidate.getName(),
@@ -259,13 +220,12 @@ public class ResumeService {
                                 accessToken
                         );
 
-                        System.out.println("Secure slot mail sent successfully");
+                        System.out.println("📅 Experienced shortlisted → Secure slot mail sent to: " + email);
                     }
                 }
             }
 
         } catch (Exception e) {
-
             e.printStackTrace();
         }
 
@@ -280,106 +240,110 @@ public class ResumeService {
                 .panelName(panelName)
                 .panelEmail(panelEmail)
                 .freeSlots(freeSlots)
+                .appliedDate(
+                        candidate.getAppliedDate() != null
+                                ? candidate.getAppliedDate().format(APPLIED_DATE_FORMAT)
+                                : null
+                )
                 .build();
     }
+
+    private String saveResumeFile(MultipartFile file) {
+        try {
+            String uploadDir = "uploads/resumes/";
+            Files.createDirectories(Paths.get(uploadDir));
+
+            String originalFileName = file.getOriginalFilename();
+            String fileName = UUID.randomUUID() + "_" + originalFileName;
+
+            Path filePath = Paths.get(uploadDir, fileName);
+            Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
+
+            return fileName; // or return filePath.toString();
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to save resume file", e);
+        }
+    }
+
     private int calculateFinalScore(Job job, String resumeText) {
 
-        resumeText = resumeText.toLowerCase()
+        String normalizedResume = resumeText.toLowerCase()
                 .replaceAll("[^a-z0-9 ]", " ")
                 .replaceAll("\\s+", " ");
 
         int matchCount = 0;
 
         for (String skill : job.getSkills()) {
-            String cleanSkill = skill.toLowerCase()
+
+            String normalizedSkill = skill.toLowerCase()
                     .replaceAll("[^a-z0-9 ]", " ")
                     .replaceAll("\\s+", " ")
                     .trim();
 
-            if (resumeText.contains(cleanSkill)) {
+            if (normalizedResume.contains(normalizedSkill)) {
                 matchCount++;
             }
         }
 
-        int totalSkills = job.getSkills().size();
+        double skillScore =
+                ((double) matchCount / job.getSkills().size()) * 100;
 
-        double candidateExp = extractExperience(resumeText);
+        double candidateExp = extractExperience(normalizedResume);
         double requiredExp = job.getExperience();
 
-        double skillScore = ((double) matchCount / totalSkills) * 100;
-
-        double expScore;
-
-        // ✅ tolerance logic
-        if (candidateExp >= requiredExp * 0.9) {
-            expScore = 100;
-        } else {
-            expScore = (candidateExp / requiredExp) * 100;
-        }
+        double expScore = requiredExp <= 0
+                ? 100
+                : candidateExp >= requiredExp * 0.9
+                  ? 100
+                  : (candidateExp / requiredExp) * 100;
 
         expScore = Math.min(expScore, 100);
 
-        double finalScore = (skillScore * 0.7) + (expScore * 0.3);
-
-        return (int) finalScore;
+        return (int) ((skillScore * 0.7) + (expScore * 0.3));
     }
 
-    // ================= EXPERIENCE =================
     private double extractExperience(String text) {
 
-        Pattern pattern = Pattern.compile(
+        Matcher matcher = Pattern.compile(
                 "(\\d+(\\.\\d+)?)\\s*(year|years|yr|yrs)",
                 Pattern.CASE_INSENSITIVE
-        );
-
-        Matcher matcher = pattern.matcher(text);
+        ).matcher(text);
 
         double maxExp = 0;
 
         while (matcher.find()) {
-            double exp = Double.parseDouble(matcher.group(1));
-            if (exp > maxExp) {
-                maxExp = exp;
-            }
+            maxExp = Math.max(
+                    maxExp,
+                    Double.parseDouble(matcher.group(1))
+            );
         }
 
         return maxExp;
     }
     private List<String> extractSkills(String resumeText) {
 
-        List<String> skills = new ArrayList<>();
-
-        resumeText = resumeText.toLowerCase();
-
-        // ✅ STRICT: stop at double newline (section boundary)
         Pattern pattern = Pattern.compile(
                 "(skills|technical skills|technologies|tech stack)\\s*[:\\-]?\\s*(.*?)\\n\\s*\\n",
                 Pattern.CASE_INSENSITIVE | Pattern.DOTALL
         );
 
-        Matcher matcher = pattern.matcher(resumeText);
+        Matcher matcher = pattern.matcher(resumeText.toLowerCase());
 
-        if (matcher.find()) {
-
-            String skillsBlock = matcher.group(2);
-
-            String[] tokens = skillsBlock.split("[,\\n•|]");
-
-            for (String token : tokens) {
-
-                String skill = token.trim();
-
-                // ✅ CLEAN
-                skill = skill.replaceAll("[^a-zA-Z0-9+#. ]", "").trim();
-
-                // ✅ STRICT FILTER
-                if (isValidSkill(skill)) {
-                    skills.add(skill);
-                }
-            }
+        if (!matcher.find()) {
+            return Collections.emptyList();
         }
 
-        return skills.stream().distinct().collect(Collectors.toList());
+        String block = matcher.group(2);
+
+        return Arrays.stream(block.split("\\n"))
+                // strip a leading "label:" prefix per line, e.g. "backend:", "databases & tools:"
+                .map(line -> line.replaceFirst("^[a-z0-9 &]+:\\s*", ""))
+                .flatMap(line -> Arrays.stream(line.split("[,•|]")))
+                .map(String::trim)
+                .map(skill -> skill.replaceAll("[^a-zA-Z0-9+#. ]", "").trim())
+                .filter(this::isValidSkill)
+                .distinct()
+                .collect(Collectors.toList());
     }
 
     private boolean isValidSkill(String skill) {
@@ -454,10 +418,10 @@ public class ResumeService {
                 .stream()
                 .map(c -> CandidateResponse.builder()
                         .name(c.getName())
+                        .candidateId(c.getId())
                         .role(c.getRole())
                         .score(c.getScore())
                         .status(c.getStatus())
-
                         .skills(
                                 c.getSkills() != null ? c.getSkills() : new ArrayList<>()
                         )
@@ -468,8 +432,189 @@ public class ResumeService {
                         .extraSkills(
                                 c.getExtraSkills() != null ? c.getExtraSkills() : new ArrayList<>()
                         )
+                        .appliedDate(
+                                c.getAppliedDate() != null
+                                        ? c.getAppliedDate().format(APPLIED_DATE_FORMAT)
+                                        : null
+                        )
+                        .resumeUrl(c.getResumeUrl())
                         .build())
+
                 .collect(Collectors.toList());
+    }
+
+    public CandidateResponse updateCandidate(String id, CandidateResponse request) {
+
+        Candidate candidate = candidateRepository.findById(id)
+                .orElseThrow(() ->
+                        new RuntimeException("Candidate not found with id: " + id));
+
+        candidate.setName(request.getName());
+        candidate.setRole(request.getRole());
+        candidate.setScore(request.getScore());
+        candidate.setStatus(request.getStatus());
+
+        candidate.setSkills(
+                request.getSkills() != null ? request.getSkills() : new ArrayList<>()
+        );
+
+        candidate.setMatchedSkills(
+                request.getMatchedSkills() != null ? request.getMatchedSkills() : new ArrayList<>()
+        );
+
+        candidate.setExtraSkills(
+                request.getExtraSkills() != null ? request.getExtraSkills() : new ArrayList<>()
+        );
+
+        candidate.setPanelName(request.getPanelName());
+        candidate.setPanelEmail(request.getPanelEmail());
+
+        candidate.setFreeSlots(
+                request.getFreeSlots() != null ? request.getFreeSlots() : new ArrayList<>()
+        );
+
+        Candidate updated = candidateRepository.save(candidate);
+
+        return CandidateResponse.builder()
+                .candidateId(updated.getId()) // Mongo ID
+                .name(updated.getName())
+                .role(updated.getRole())
+                .score(updated.getScore())
+                .status(updated.getStatus())
+                .skills(updated.getSkills() != null ? updated.getSkills() : new ArrayList<>())
+                .matchedSkills(updated.getMatchedSkills() != null ? updated.getMatchedSkills() : new ArrayList<>())
+                .extraSkills(updated.getExtraSkills() != null ? updated.getExtraSkills() : new ArrayList<>())
+                .panelName(updated.getPanelName())
+                .panelEmail(updated.getPanelEmail())
+                .freeSlots(updated.getFreeSlots() != null ? updated.getFreeSlots() : new ArrayList<>())
+                .build();
+    }
+
+    public void deleteCandidate(String id) {
+
+        Candidate candidate = candidateRepository.findById(id)
+                .orElseThrow(() ->
+                        new RuntimeException("Candidate not found with id: " + id));
+
+        candidateRepository.delete(candidate);
+    }
+
+    public CandidateResponse updateCandidateStatus(String candidateId, UpdateCandidateRequest request) {
+
+
+        Candidate candidate = candidateRepository.findById(candidateId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Candidate not found"));
+
+        String previousStatus = candidate.getStatus();
+        String newStatus      = request.getStatus();
+
+        // ── 2. Apply field updates ───────────────────────────────────────────
+        if (request.getName()  != null) candidate.setName(request.getName());
+        if (request.getRole()  != null) candidate.setRole(request.getRole());
+        if (request.getScore() != null) candidate.setScore(request.getScore());
+        if (request.getStatus()!= null) candidate.setStatus(newStatus);
+
+        candidate = candidateRepository.save(candidate);
+
+        boolean statusChanged = newStatus != null && !newStatus.equalsIgnoreCase(previousStatus);
+
+        if (statusChanged && candidate.getEmail() != null) {
+            try {
+                triggerStatusEmail(candidate, newStatus);
+            } catch (Exception e) {
+                // Log but don't fail the update
+                e.printStackTrace();
+            }
+        }
+        return CandidateResponse.builder()
+                .candidateId(candidate.getId())
+                .name(candidate.getName())
+                .role(candidate.getRole())
+                .score(candidate.getScore())
+                .status(candidate.getStatus())
+                .matchedSkills(candidate.getMatchedSkills())
+                .extraSkills(candidate.getExtraSkills())
+                .panelName(candidate.getPanelName())
+                .panelEmail(candidate.getPanelEmail())
+                .build();
+    }
+
+    // ── Email trigger — mirrors processResume logic exactly ──────────────────────
+    private void triggerStatusEmail(Candidate candidate, String status) throws Exception {
+
+        String email = candidate.getEmail();
+        String name  = candidate.getName();
+        String role  = candidate.getRole();
+
+        switch (status) {
+
+            case "Rejected" -> {
+                emailService.sendStatusEmail(email, name, "NOT_MATCH");
+                System.out.println("📧 Rejection email sent to: " + email);
+            }
+            case "Review" -> {
+                emailService.sendStatusEmail(email, name, "UNDER_REVIEW");
+                System.out.println("📧 Under-review email sent to: " + email);
+            }
+            case "Shortlisted" -> {
+
+                if (candidate.getExperience() <= fresherMaxExperience) {
+                    GenerateLinkRequestDTO request = new GenerateLinkRequestDTO();
+                    request.setCandidateId(candidate.getId());
+                    request.setTestId("GENERAL_TEST");
+                    String testLink = testService.generateTestLink(request);
+                    candidate.setInterviewLink(testLink);
+                    candidateRepository.save(candidate);
+                    emailService.sendTestLink(email, testLink);
+                    System.out.println("🧠 Fresher → Test link re-sent to: " + email);
+
+                } else {
+                    List<Panel> panels = panelService.assignPanel(role);
+
+                    if (panels == null || panels.isEmpty()) {
+                        throw new RuntimeException("No panel available for role: " + role);
+                    }
+
+                    Panel panel = panels.get(0);
+
+                    candidate.setPanelName(panel.getName());
+                    candidate.setPanelEmail(panel.getEmail());
+                    candidate.setAssignedPanelId(panel.getId());
+                    candidateRepository.save(candidate);
+
+                    List<String> freeSlots = availabilityService.getFreeSlots(
+                            panel.getEmail(),
+                            LocalDate.now().plusDays(1).toString()
+                    );
+
+                    String accessToken = UUID.randomUUID().toString();
+
+                    CandidateAccessToken token = CandidateAccessToken.builder()
+                            .candidateId(candidate.getId())
+                            .token(accessToken)
+                            .expiryTime(LocalDateTime.now().plusHours(24))
+                            .used(false)
+                            .build();
+                    tokenRepository.save(token);
+
+                    emailService.sendCandidateSlotSelectionMail(
+                            email, name, role, freeSlots, accessToken);
+
+                    System.out.println("📅 Slot selection mail sent to: " + email);
+                }
+            }
+
+            default -> System.out.println("⚠️ No email rule for status: " + status);
+        }
+    }
+
+    public long getShortlistedCount() {
+        return candidateRepository.countByStatus("Shortlisted");
+    }
+
+    public long getTotalUploadedResumes() {
+        return candidateRepository.count();
     }
 
 }

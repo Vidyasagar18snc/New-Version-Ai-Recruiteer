@@ -1,6 +1,8 @@
 package com.Vendor.controller;
 
+import com.Vendor.dto.OfferAcceptanceRateResponse;
 import com.Vendor.dto.OfferRejectRequest;
+import com.Vendor.dto.TimeToHireResponse;
 import com.Vendor.model.OfferRequestDTO;
 import com.Vendor.repository.OfferRepository;
 import com.Vendor.service.EmailService;
@@ -15,7 +17,6 @@ import java.time.LocalDateTime;
 @RestController
 @RequestMapping("/api")
 @RequiredArgsConstructor
-@CrossOrigin
 public class OfferController {
 
     private final OfferService offerService;
@@ -109,6 +110,13 @@ public class OfferController {
                 )
         );
     }
-
+    @GetMapping("/acceptance-summary")
+    public ResponseEntity<OfferAcceptanceRateResponse> getOfferAcceptanceSummary() {
+        return ResponseEntity.ok(offerService.getOfferAcceptanceSummary());
+    }
+    @GetMapping("/time-to-hire-summary")
+    public ResponseEntity<TimeToHireResponse> getTimeToHireSummary() {
+        return ResponseEntity.ok(offerService.getTimeToHireSummary());
+    }
 
 }

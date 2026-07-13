@@ -32,25 +32,29 @@ app:
 
   hr:
     email: vidya.sagar@hginfotech.io
-
 interview:
   interviewers:
     - id: 1
       name: A
       email: vidyasagarnatikar07@gmail.com
+
     - id: 2
       name: B
       email: bramhananda.kl@hginfotech.io
+
     - id: 3
       name: C
       email: c@company.com
+
     - id: 4
       name: D
       email: d@company.com
-      server:
-        error:
-          include-message=always:
 
 server:
-  port: 8081
+  port: 8082
+  error:
+    include-message: always
+
+tesseract:
+  data-path: C:/Program Files/Tesseract-OCR/tessdata
     

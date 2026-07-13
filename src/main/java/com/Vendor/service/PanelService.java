@@ -18,7 +18,6 @@ public class PanelService {
     private final CandidateRepository candidateRepository;
 
     public List<Panel> assignPanel(String role) {
-
         List<Panel> matchedPanels = panelRepository.findAll()
                 .stream()
                 .filter(panel ->
@@ -26,35 +25,44 @@ public class PanelService {
                                 || panel.getRole().toLowerCase().contains(role.toLowerCase())
                 )
                 .filter(Panel::isAvailable)
+                .sorted(
+                        Comparator.comparingLong(
+                                this::getAssignedCandidateCount
+                        )
+                )
                 .toList();
 
         if (matchedPanels.isEmpty()) {
-            return Collections.emptyList();
-        }
-        System.out.println("========== PANEL LOAD ==========");
-
-        matchedPanels.forEach(panel -> {
-            long count = getAssignedCandidateCount(panel);
 
             System.out.println(
-                    panel.getName() + " -> " + count
+                    "No matching panels found"
+            );
+
+            return Collections.emptyList();
+        }
+
+        System.out.println(
+                "========== PANEL LOAD =========="
+        );
+
+        matchedPanels.forEach(panel -> {
+
+            long count =
+                    getAssignedCandidateCount(panel);
+
+            System.out.println(
+                    panel.getName()
+                            + " -> "
+                            + count
             );
         });
 
-        Panel selectedPanel = matchedPanels.stream()
-                .min(Comparator.comparingLong(this::getAssignedCandidateCount))
-                .orElse(null);
+        System.out.println(
+                "Preferred Panel : "
+                        + matchedPanels.get(0).getName()
+        );
 
-        if (selectedPanel != null) {
-
-            System.out.println(
-                    "Selected Panel : " + selectedPanel.getName()
-            );
-
-            return List.of(selectedPanel);
-        }
-
-        return Collections.emptyList();
+        return matchedPanels;
     }
 
     private long getAssignedCandidateCount(Panel panel) {
@@ -65,10 +73,8 @@ public class PanelService {
     }
     public Panel addPanel(Panel panel) {
 
-        Panel saved = panelRepository.save(panel);
+        System.out.println("Job Title: " + panel.getJobTitle());
 
-        System.out.println("Saved ID: " + saved.getId());
-
-        return saved;
+        return panelRepository.save(panel);
     }
 }

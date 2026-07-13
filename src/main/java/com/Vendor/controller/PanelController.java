@@ -26,7 +26,6 @@ public class PanelController {
 
     @PostMapping("/add")
     public Panel addPanel(@RequestBody Panel panel) {
-
         return panelService.addPanel(panel);
     }
 
@@ -34,114 +33,83 @@ public class PanelController {
     public List<Panel> getPanels(
             @RequestParam String role
     ) {
-
         return panelService.assignPanel(role);
     }
+
+    // ── NEW: delete a panel by id ──────────────────────────────────────────
+    @DeleteMapping("/panel/{id}")
+    public ResponseEntity<?> deletePanel(
+            @PathVariable String id
+    ) {
+        if (!panelRepository.existsById(id)) {
+            return ResponseEntity.notFound().build();
+        }
+        panelRepository.deleteById(id);
+        return ResponseEntity.ok().build();
+    }
+
     @GetMapping("/free-slots")
     public List<String> getSlots(
             @RequestParam String email,
             @RequestParam String date
     ) throws Exception {
-
-        return availabilityService.getFreeSlots(
-                email,
-                date
-        );
+        return availabilityService.getFreeSlots(email, date);
     }
+
     @GetMapping("/shortlisted")
     public List<Candidate> getShortlistedCandidates() {
-
-        return candidateRepository
-                .findByStatusIgnoreCase(
-                        "Shortlisted"
-                );
+        return candidateRepository.findByStatusIgnoreCase("Shortlisted");
     }
+
     @GetMapping("/assigned-panel/{candidateId}")
     public ResponseEntity<Panel> getAssignedPanel(
             @PathVariable String candidateId
-    ){
-
-        Candidate candidate=
+    ) {
+        Candidate candidate =
                 candidateRepository
                         .findById(candidateId)
-                        .orElseThrow(()->
-                                new RuntimeException(
-                                        "Candidate not found"
-                                ));
+                        .orElseThrow(() -> new RuntimeException("Candidate not found"));
 
-        if(candidate.getAssignedPanelId()==null){
-
+        if (candidate.getAssignedPanelId() == null) {
             return ResponseEntity.notFound().build();
         }
 
-        Panel panel=
+        Panel panel =
                 panelRepository
-                        .findById(
-                                candidate.getAssignedPanelId()
-                        )
-                        .orElseThrow(()->
-                                new RuntimeException(
-                                        "Panel not found"
-                                ));
+                        .findById(candidate.getAssignedPanelId())
+                        .orElseThrow(() -> new RuntimeException("Panel not found"));
 
         return ResponseEntity.ok(panel);
     }
+
     @PostMapping("/panel/login")
     public ResponseEntity<?> login(
             @RequestBody LoginRequest request
-    ){
+    ) {
+        System.out.println("Login Email : " + request.getEmail());
+        System.out.println("Login Password : " + request.getPassword());
 
-        System.out.println(
-                "Login Email : "
-                        +request.getEmail()
-        );
+        Optional<Panel> optionalPanel =
+                panelRepository.findByEmailAndPassword(
+                        request.getEmail(),
+                        request.getPassword()
+                );
 
-        System.out.println(
-                "Login Password : "
-                        +request.getPassword()
-        );
-
-        Optional<Panel> optionalPanel=
-
-                panelRepository
-                        .findByEmailAndPassword(
-
-                                request.getEmail(),
-
-                                request.getPassword()
-                        );
-
-        if(optionalPanel.isEmpty()){
-
-            return ResponseEntity
-                    .badRequest()
-                    .body(
-                            "Invalid Credentials"
-                    );
+        if (optionalPanel.isEmpty()) {
+            return ResponseEntity.badRequest().body("Invalid Credentials");
         }
 
-        Panel panel=
-                optionalPanel.get();
-
+        Panel panel = optionalPanel.get();
         return ResponseEntity.ok(panel);
     }
+
     @GetMapping("/my-candidates/{panelId}")
-
-    public ResponseEntity<List<Candidate>>
-    getMyCandidates(
-
+    public ResponseEntity<List<Candidate>> getMyCandidates(
             @PathVariable String panelId
-    ){
+    ) {
+        List<Candidate> candidates =
+                candidateRepository.findByAssignedPanelId(panelId);
 
-        List<Candidate> candidates=
-
-                candidateRepository
-                        .findByAssignedPanelId(
-                                panelId
-                        );
-
-        return ResponseEntity.ok(
-                candidates
-        );
+        return ResponseEntity.ok(candidates);
     }
 }

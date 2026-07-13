@@ -5,6 +5,7 @@ import com.Vendor.dto.CandidateAccessToken;
 import com.Vendor.dto.SlotSelectionRequest;
 import com.Vendor.model.Candidate;
 import com.Vendor.model.Interview;
+import com.Vendor.model.Panel;
 import com.Vendor.repository.CandidateAccessTokenRepository;
 import com.Vendor.repository.CandidateRepository;
 import com.Vendor.repository.InterviewRepository;
@@ -27,6 +28,7 @@ public class InterviewService {
     private final InterviewRepository interviewRepo;
 
     private final EmailService emailService;
+    private final PanelService panelService;
 
     private final CandidateAccessTokenRepository tokenRepository;
 
@@ -160,7 +162,7 @@ public class InterviewService {
 
             throw new RuntimeException(
                     "Token already used"
-            );  
+            );
         }
 
         // Token expired
@@ -182,21 +184,47 @@ public class InterviewService {
                         )
                 );
 
-        // CALL YOUR EXISTING METHOD
-        Interview interview =
-                scheduleInterview(
-                        candidate.getName(),
-                        candidate.getId(),
-                        candidate.getPanelEmail(),
-                        request.getSelectedSlot()
-                );
+        // Save selected slot
+        candidate.setSelectedSlot(
+                request.getSelectedSlot()
+        );
+
+        // Panel already assigned during processResume()
+        if (candidate.getPanelEmail() == null
+                || candidate.getPanelEmail().isBlank()) {
+
+            throw new RuntimeException(
+                    "Panel not assigned for candidate"
+            );
+        }
+
+        // Update status
+        candidate.setStatus(
+                "PANEL_PENDING"
+        );
+
+        candidateRepository.save(candidate);
+
+        // Send approval mail to panel
+        emailService.sendPanelApprovalMail(
+                candidate.getPanelEmail(),
+                candidate.getId(),
+                candidate.getName(),
+                candidate.getRole(),
+                request.getSelectedSlot()
+        );
 
         // Mark token used
         token.setUsed(true);
 
         tokenRepository.save(token);
 
-        return interview;
+        System.out.println(
+                "Panel approval mail sent to : "
+                        + candidate.getPanelEmail()
+        );
+
+        return null;
     }
     public List<String> getSlotsByToken(
             String tokenValue
@@ -242,12 +270,103 @@ public class InterviewService {
                 );
 
         // FETCH REAL SLOTS
+        if (candidate.getPanelEmail() == null) {
+            throw new RuntimeException(
+                    "Panel not assigned yet for this candidate"
+            );
+        }
 
         return availabilityService.getFreeSlots(
                 candidate.getPanelEmail(),
                 LocalDate.now()
                         .plusDays(1)
                         .toString()
+        );
+    }
+    public Interview acceptPanel(String candidateId){
+
+        Candidate candidate =
+                candidateRepository.findById(
+                        candidateId
+                ).orElseThrow();
+
+        System.out.println(
+                "Panel Accepted : " +
+                        candidate.getPanelName()
+        );
+
+        System.out.println(
+                "Selected Slot : " +
+                        candidate.getSelectedSlot()
+        );
+
+        return scheduleInterview(
+                candidate.getName(),
+                candidate.getId(),
+                candidate.getPanelEmail(),
+                candidate.getSelectedSlot()
+        );
+    }
+    public void declinePanel(
+            String candidateId
+    ) {
+
+        Candidate candidate =
+                candidateRepository.findById(
+                        candidateId
+                ).orElseThrow(
+                        () -> new RuntimeException(
+                                "Candidate not found"
+                        )
+                );
+
+        List<Panel> panels =
+                panelService.assignPanel(
+                        candidate.getRole()
+                );
+
+        Panel nextPanel = panels.stream()
+                .filter(panel ->
+                        !panel.getId().equals(
+                                candidate.getAssignedPanelId()
+                        )
+                )
+                .findFirst()
+                .orElseThrow(
+                        () -> new RuntimeException(
+                                "No alternate panel available"
+                        )
+                );
+
+        candidate.setPanelName(
+                nextPanel.getName()
+        );
+
+        candidate.setPanelEmail(
+                nextPanel.getEmail()
+        );
+
+        candidate.setAssignedPanelId(
+                nextPanel.getId()
+        );
+
+        candidate.setStatus(
+                "PANEL_REASSIGNED"
+        );
+
+        candidateRepository.save(candidate);
+
+        emailService.sendPanelApprovalMail(
+                nextPanel.getEmail(),
+                candidate.getId(),
+                candidate.getName(),
+                candidate.getRole(),
+                candidate.getSelectedSlot()
+        );
+
+        System.out.println(
+                "Panel declined. Reassigned to : "
+                        + nextPanel.getName()
         );
     }
 }

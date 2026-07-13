@@ -26,5 +26,7 @@ public class CandidateResponse {
     // ================= AVAILABLE SLOTS =================
 
     private List<String> freeSlots;
+    private String resumeUrl;
+    private String appliedDate;
 
 }

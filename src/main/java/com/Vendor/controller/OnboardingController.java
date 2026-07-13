@@ -1,18 +1,24 @@
 package com.Vendor.controller;
 
+import com.Vendor.dto.PendingOnboardingResponse;
+import com.Vendor.model.Onboarding;
 import com.Vendor.service.DocumentService;
+import com.Vendor.service.OnboardingService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.List;
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/onboarding")
 @RequiredArgsConstructor
-@CrossOrigin
 public class OnboardingController {
 
     private final DocumentService documentService;
+    private final OnboardingService onboardingService;
     @PostMapping("/upload-document")
     public ResponseEntity<?> uploadDocument(
             @RequestParam MultipartFile[] files,
@@ -77,4 +83,37 @@ public class OnboardingController {
             );
         }
     }
+    @PostMapping("/background-verification")
+    public ResponseEntity<?> sendVerification(
+            @RequestParam  String id,
+            @RequestParam String hrEmail
+    ) {
+
+        onboardingService.sendVerification(
+                id,
+                hrEmail
+        );
+
+        return ResponseEntity.ok(
+                Map.of(
+                        "message",
+                        "Verification request sent successfully"
+                )
+        );
+    }
+    @GetMapping("/all")
+    public ResponseEntity<List<Onboarding>> getAllOnboardingCandidates() {
+
+        return ResponseEntity.ok(
+                onboardingService.getAllOnboardingCandidates()
+        );
+    }
+    @GetMapping("/count")
+    public ResponseEntity<Long> getOnboardingCount() {
+        return ResponseEntity.ok(
+                onboardingService.getOnboardingCount()
+        );
+    }
+    @GetMapping("/pending-summary") public ResponseEntity<PendingOnboardingResponse> getPendingOnboardingSummary() {
+        return ResponseEntity.ok(onboardingService.getPendingOnboardingSummary()); }
 }

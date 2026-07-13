@@ -6,6 +6,8 @@ import org.springframework.data.annotation.Id;
 
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import java.util.List;
+
 @Data
 
 @Document(collection = "assets")
@@ -26,4 +28,6 @@ public class Asset {
     private String serialNumber;
 
     private String status;
+    private String accessories;
+
 }

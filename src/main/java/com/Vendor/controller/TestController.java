@@ -11,7 +11,6 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api")
-@CrossOrigin(origins = "http://localhost:4200")
 @RequiredArgsConstructor
 public class TestController {
 
@@ -50,7 +49,13 @@ public class TestController {
         TestResultResponse response = testService.evaluateTest(request);
         return ResponseEntity.ok(response);
     }
+    @PostMapping("/violation")
+    public ResponseEntity<ViolationResponse>
+    recordViolation(
+            @RequestBody ViolationRequest request) {
 
-
-
+        return ResponseEntity.ok(
+                testService.recordViolation(
+                        request));
+    }
 }

@@ -1,8 +1,7 @@
 package com.Vendor.service;
-
 import com.Vendor.dto.AssetAssignment;
+import com.Vendor.dto.AttritionRateResponse;
 import com.Vendor.dto.DeboardingRequest;
-import com.Vendor.dto.KnowledgeTransferRequest;
 import com.Vendor.model.DeboardingRecord;
 import com.Vendor.model.Employee;
 import com.Vendor.model.KnowledgeTransfer;
@@ -12,332 +11,240 @@ import com.Vendor.repository.EmployeeRepository;
 import com.Vendor.repository.KnowledgeTransferRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
+import java.time.ZoneId;
+import java.util.Date;
 import java.util.List;
 
-@Service @RequiredArgsConstructor
+@Service
+@RequiredArgsConstructor
 public class DeboardingService {
+
     private final EmployeeRepository employeeRepository;
     private final DeboardingRepository deboardingRepository;
     private final KnowledgeTransferRepository knowledgeTransferRepository;
     private final AssetAssignmentRepository assetAssignmentRepository;
     private final EmailService emailService;
+    private final S3Service s3Service;
+
+    // ── INITIATE KT ──────────────────────────────────────────────────────────
 
     public String initiateKT(
+            String employeeId,
+            String transferToEmployeeId,
+            MultipartFile file
+    ) throws Exception {
 
+        Employee fromEmployee = employeeRepository
+                .findByEmployeeId(employeeId)
+                .orElseThrow(() -> new RuntimeException("Employee not found: " + employeeId));
 
-            KnowledgeTransferRequest request
-    ) {
+        Employee toEmployee = employeeRepository
+                .findByEmployeeId(transferToEmployeeId)
+                .orElseThrow(() -> new RuntimeException("Transfer-to employee not found: " + transferToEmployeeId));
 
-        Employee employee =
+        String originalName = file.getOriginalFilename();
+        if (originalName == null || originalName.isBlank()) {
+            originalName = "KT_Document.pdf";
+        }
 
-                employeeRepository
+        String fileName = "kt/" + employeeId + "/" + System.currentTimeMillis() + "_" + originalName;
 
-                        .findByEmployeeId(
+        s3Service.uploadFile(file.getBytes(), fileName, file.getContentType());
+        String documentUrl = s3Service.generatePresignedUrl(fileName);
 
-                                request.getEmployeeId()
-                        )
+        KnowledgeTransfer kt = new KnowledgeTransfer();
+        kt.setEmployeeId(fromEmployee.getEmployeeId());
+        kt.setEmployeeName(fromEmployee.getEmployeeName());
+        kt.setDepartment(fromEmployee.getDepartment());
+        kt.setTransferToEmployeeId(toEmployee.getEmployeeId());
+        kt.setTransferToEmployeeName(toEmployee.getEmployeeName());
+        kt.setDocumentName(originalName);
+        kt.setDocumentS3Key(fileName);
+        kt.setDocumentUrl(documentUrl);
+        kt.setStatus("PENDING");
+        kt.setKtDate(LocalDate.now());
 
-                        .orElseThrow(() ->
+        knowledgeTransferRepository.save(kt);
 
-                                new RuntimeException(
+        return "Knowledge Transfer Initiated Successfully from "
+                + fromEmployee.getEmployeeName()
+                + " → "
+                + toEmployee.getEmployeeName();
+    }
 
-                                        "Employee not found"
-                                )
-                        );
+    // ── COMPLETE KT ──────────────────────────────────────────────────────────
 
-        KnowledgeTransfer kt =
-                new KnowledgeTransfer();
+    public String completeKT(String employeeId) {
 
-        kt.setEmployeeId(
-                employee.getEmployeeId()
-        );
+        List<KnowledgeTransfer> ktList = knowledgeTransferRepository.findAllByEmployeeId(employeeId);
 
-        kt.setEmployeeName(
-                employee.getEmployeeName()
-        );
+        if (ktList.isEmpty()) {
+            throw new RuntimeException("KT record not found for employee: " + employeeId);
+        }
 
-        kt.setDepartment(
-                employee.getDepartment()
-        );
+        KnowledgeTransfer kt = ktList.get(ktList.size() - 1);
+        kt.setStatus("COMPLETED");
+        knowledgeTransferRepository.save(kt);
 
-        kt.setProjectName(
-                request.getProjectName()
-        );
-
-        kt.setTaskDetails(
-                request.getTaskDetails()
-        );
-
-        kt.setDocumentationLink(
-                request.getDocumentationLink()
-        );
-
-        kt.setCredentialsShared(
-                request.getCredentialsShared()
-        );
-
-        kt.setTransferredTo(
-                request.getTransferredTo()
-        );
-
-        kt.setRemarks(
-                request.getRemarks()
-        );
-
-        kt.setStatus(
-                "PENDING"
-        );
-
-        kt.setKtDate(
-                LocalDate.now()
-        );
-
-        knowledgeTransferRepository.save(
-                kt
-        );
-        // SEND MAIL TO EMPLOYEE
+        Employee employee = employeeRepository
+                .findByEmployeeId(employeeId)
+                .orElseThrow(() -> new RuntimeException("Employee not found"));
 
         emailService.sendKTMail(
-                employee.getOfficialEmail(),
+                employee.getPersonalEmail(),
                 employee.getEmployeeName(),
-                kt.getProjectName(),
-                kt.getTransferredTo()
+                kt.getDocumentUrl()
         );
 
-        Employee transferEmployee = employeeRepository.findByEmployeeName(kt.getTransferredTo())
-
-                        .orElse(null);
-
-        if(transferEmployee != null){
-
-            emailService.sendKTMail(
-
-                    transferEmployee.getOfficialEmail(),
-
-                    employee.getEmployeeName(),
-
-                    kt.getProjectName(),
-
-                    kt.getTransferredTo()
-            );
-        }
-
-// SEND MAIL TO HR
-
-        List<Employee> hrEmployees =
-
-                employeeRepository
-
-                        .findByDepartment(
-                                "HR"
-                        );
-
-        for(Employee hr : hrEmployees){
-
-            emailService.sendKTMail(
-
-                    hr.getOfficialEmail(),
-
-                    employee.getEmployeeName(),
-
-                    kt.getProjectName(),
-
-                    kt.getTransferredTo()
-            );
-        }
-
-        return "Knowledge Transfer Initiated";
+        return "KT Completed Successfully — transferred to " + kt.getTransferToEmployeeName();
     }
-    public String completeKT(
 
-            String employeeId
-    ) {
+    // ── INITIATE DEBOARDING ──────────────────────────────────────────────────
 
-        KnowledgeTransfer kt =
+    public String initiateDeboarding(DeboardingRequest request) {
 
-                knowledgeTransferRepository
+        Employee employee = employeeRepository
+                .findByEmployeeId(request.getEmployeeId())
+                .orElseThrow(() -> new RuntimeException("Employee not found"));
 
-                        .findTopByEmployeeIdOrderByKtDateDesc(
+        List<AssetAssignment> assignedAssets = assetAssignmentRepository
+                .findByEmployeeId(employee.getEmployeeId())
+                .stream()
+                .filter(asset -> "ASSIGNED".equalsIgnoreCase(asset.getStatus()))
+                .toList();
 
-                                employeeId
-                        )
-
-                        .orElseThrow(() ->
-
-                                new RuntimeException(
-
-                                        "KT record not found"
-                                )
-                        );
-
-        kt.setStatus(
-                "COMPLETED"
-        );
-
-        knowledgeTransferRepository.save(
-                kt
-        );
-
-        return "KT Completed Successfully";
-    }
-    public String initiateDeboarding(
-
-            DeboardingRequest request
-    ) {
-
-        Employee employee =
-
-                employeeRepository
-
-                        .findByEmployeeId(
-
-                                request.getEmployeeId()
-                        )
-
-                        .orElseThrow(() ->
-
-                                new RuntimeException(
-
-                                        "Employee not found"
-                                )
-                        );
-
-        // CHECK ASSETS
-
-        List<AssetAssignment> assignedAssets =
-
-                assetAssignmentRepository
-
-                        .findByEmployeeId(
-
-                                employee.getEmployeeId()
-                        )
-
-                        .stream()
-
-                        .filter(asset ->
-
-                                asset.getStatus()
-                                        .equals("ASSIGNED")
-                        )
-
-                        .toList();
-
-        if(
-
-                !assignedAssets.isEmpty()
-        ){
-
-            throw new RuntimeException(
-
-                    "Employee still has assigned assets"
-            );
+        if (!assignedAssets.isEmpty()) {
+            throw new RuntimeException("Employee still has assigned assets");
         }
 
-        // CHECK KT
+        List<KnowledgeTransfer> ktList = knowledgeTransferRepository
+                .findAllByEmployeeId(employee.getEmployeeId());
 
-        List<KnowledgeTransfer> ktList =
-
-                knowledgeTransferRepository
-
-                        .findByEmployeeId(
-
-                                employee.getEmployeeId()
-                        );
-
-        if(
-
-                ktList.isEmpty()
-        ){
-
-            throw new RuntimeException(
-
-                    "Knowledge Transfer pending"
-            );
+        if (ktList.isEmpty()) {
+            throw new RuntimeException("Knowledge Transfer pending");
         }
 
-        KnowledgeTransfer latestKT =
-
-                ktList.get(
-                        ktList.size()-1
-                );
-
-        if(
-
-                !latestKT.getStatus()
-                        .equals("COMPLETED")
-        ){
-
-            throw new RuntimeException(
-
-                    "Knowledge Transfer not completed"
-            );
+        KnowledgeTransfer latestKT = ktList.get(ktList.size() - 1);
+        if (!"COMPLETED".equalsIgnoreCase(latestKT.getStatus())) {
+            throw new RuntimeException("Knowledge Transfer not completed");
         }
 
-        // CREATE RECORD
+        DeboardingRecord record = new DeboardingRecord();
+        record.setEmployeeId(employee.getEmployeeId());
+        record.setEmployeeName(employee.getEmployeeName());
+        record.setDepartment(employee.getDepartment());
+        record.setReason(request.getReason());
+        record.setLastWorkingDate(LocalDate.parse(request.getLastWorkingDate()));
+        record.setRemarks(request.getRemarks());
+        record.setInitiatedBy(request.getInitiatedBy());
+        record.setInitiatedDate(LocalDate.now());
+        record.setStatus("COMPLETED");
 
-        DeboardingRecord record =
-                new DeboardingRecord();
+        deboardingRepository.save(record);
 
-        record.setEmployeeId(
-                employee.getEmployeeId()
-        );
-
-        record.setEmployeeName(
-                employee.getEmployeeName()
-        );
-
-        record.setDepartment(
-                employee.getDepartment()
-        );
-
-        record.setReason(
-                request.getReason()
-        );
-
-        record.setLastWorkingDate(
-
-                LocalDate.parse(
-                        request.getLastWorkingDate()
-                )
-        );
-
-        record.setRemarks(
-                request.getRemarks()
-        );
-
-        record.setInitiatedBy(
-                request.getInitiatedBy()
-        );
-
-        record.setInitiatedDate(
-                LocalDate.now()
-        );
-
-        record.setStatus(
-                "COMPLETED"
-        );
-
-        deboardingRepository.save(
-                record
-        );
-
-        // DEACTIVATE EMPLOYEE
-
-        employee.setStatus(
-                "INACTIVE"
-        );
-
-        employeeRepository.save(
-                employee
-        );
+        employee.setStatus("INACTIVE");
+        employeeRepository.save(employee);
 
         return "Deboarding Completed Successfully";
     }
-    public List<DeboardingRecord> getAllDeboarding(){
 
+    // ── BASIC QUERIES ────────────────────────────────────────────────────────
+
+    public List<DeboardingRecord> getAllDeboarding() {
         return deboardingRepository.findAll();
     }
+
+    public long getCompletedDeboardingCount() {
+        return deboardingRepository.countByStatus("COMPLETED");
+    }
+
+    public List<KnowledgeTransfer> getAllKnowledgeTransfers() {
+        return knowledgeTransferRepository.findAll();
+    }
+
+    public long getTotalKTCount() {
+        return knowledgeTransferRepository.count();
+    }
+
+    public long getTotalDeboardingCount() {
+        return deboardingRepository.count();
+    }
+
+    public long getTotalAlumniCount() {
+        return deboardingRepository.countByStatus("COMPLETED");
+    }
+
+    // ── ATTRITION LOGIC ──────────────────────────────────────────────────────
+
+    public double getAttritionRate() {
+        long totalEmployees = employeeRepository.count();
+
+        if (totalEmployees == 0) {
+            return 0.0;
+        }
+
+        LocalDate now = LocalDate.now();
+        Date startDate = toDate(now.withDayOfMonth(1));
+        Date endDate = toDate(now.withDayOfMonth(now.lengthOfMonth()));
+
+        long completedDeboardingsThisMonth =
+                deboardingRepository.countByStatusAndLastWorkingDateBetween(
+                        "COMPLETED",
+                        startDate,
+                        endDate
+                );
+
+        double rate = ((double) completedDeboardingsThisMonth / totalEmployees) * 100;
+        return round(rate);
+    }
+
+    public double getLastMonthAttritionRate() {
+        long totalEmployees = employeeRepository.count();
+
+        if (totalEmployees == 0) {
+            return 0.0;
+        }
+
+        LocalDate lastMonth = LocalDate.now().minusMonths(1);
+        Date startDate = toDate(lastMonth.withDayOfMonth(1));
+        Date endDate = toDate(lastMonth.withDayOfMonth(lastMonth.lengthOfMonth()));
+
+        long completedDeboardingsLastMonth =
+                deboardingRepository.countByStatusAndLastWorkingDateBetween(
+                        "COMPLETED",
+                        startDate,
+                        endDate
+                );
+
+        double rate = ((double) completedDeboardingsLastMonth / totalEmployees) * 100;
+        return round(rate);
+    }
+
+    public double getAttritionRateChange() {
+        return round(getAttritionRate() - getLastMonthAttritionRate());
+    }
+
+    public AttritionRateResponse getAttritionSummary() {
+        double currentMonthRate = getAttritionRate();
+        double lastMonthRate = getLastMonthAttritionRate();
+        double change = round(currentMonthRate - lastMonthRate);
+
+        return new AttritionRateResponse(currentMonthRate, lastMonthRate, change);
+    }
+
+    // ── HELPER METHODS ───────────────────────────────────────────────────────
+
+    private Date toDate(LocalDate localDate) {
+        return Date.from(
+                localDate.atStartOfDay(ZoneId.systemDefault()).toInstant()
+        );
+    }
+
+    private double round(double value) {
+        return Math.round(value * 10.0) / 10.0;
+    }
 }
+
