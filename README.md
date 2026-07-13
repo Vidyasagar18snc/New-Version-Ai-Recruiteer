@@ -1,289 +1,284 @@
 # AI Recruiter & Employee Lifecycle Management System
 
-## Overview
+## Project Overview
 
-The AI Recruiter & Employee Lifecycle Management System is a web-based application that automates the complete employee lifecycle, from recruitment to offboarding.
+The AI Recruiter & Employee Lifecycle Management System is a web-based application that automates the complete employee lifecycle, from recruitment to offboarding. The system enables HR teams, recruiters, managers, administrators, and employees to manage recruitment, onboarding, employee records, knowledge transfer, asset management, and offboarding through a centralized platform.
 
-The system allows HR teams to manage:
+---
 
-- Resume Upload
-- Candidate Screening
+## Features
+
+- Secure Authentication and Authorization
+- Role-Based Access Control
+- Candidate Management
+- Resume Upload and Management
 - Interview Scheduling
 - Offer Letter Generation
-- Onboarding
+- Employee Onboarding
 - Employee Management
 - Knowledge Transfer (KT)
 - Asset Management
 - Offboarding
-- Alumni Management
+- Email Notifications
+- Dashboard and Reports
 
 ---
 
-# Technology Stack
+## Technology Stack
 
 ### Frontend
+
 - Angular
 - TypeScript
-- HTML
-- CSS
-- Bootstrap
+- HTML5
+- CSS3
 
 ### Backend
+
 - Java
 - Spring Boot
 - Spring Security
-- REST API
+- Maven
 
 ### Database
+
 - MongoDB
 
-### Cloud Services
-- AWS S3 (File Storage)
+### Cloud and Integrations
+
+- AWS S3
 - Google Calendar API
-- Email Service
+- Java Mail Sender
 
 ---
 
-# Prerequisites
+## Repository Information
 
-Before running the project, install the following software.
+### Frontend Repository
 
-| Software | Version |
-|----------|----------|
-| Java JDK | 17+ |
-| Maven | Latest |
-| Node.js | 18+ |
-| Angular CLI | Latest |
-| MongoDB | Latest |
-| Git | Latest |
+Repository: https://github.com/Vidyasagar18snc/New-UI-Code
 
-Verify the installation:
+Branch: feature/frontend-setup
 
-```bash
+### Backend Repository
+
+Repository: https://github.com/Vidyasagar18snc/New-Version-Ai-Recruiteer
+
+Branch: feature/project-setup
+
+---
+
+## Prerequisites
+
+Install the following software before setting up the project.
+
+- Git
+- Java JDK 17 or later
+- Maven
+- Node.js 18 or later
+- npm
+- Angular CLI
+- MongoDB
+- Visual Studio Code or IntelliJ IDEA
+
+Verify the installation.
+
+bash
 java -version
 mvn -version
 node -v
 npm -v
 ng version
-mongod --version
-```
+git --version
+
 
 ---
 
-# Clone the Repository
+## Clone the Repository
 
-```bash
-git clone <repository-url>
-```
+Clone the backend repository.
 
-Move into the project directory.
+bash
+git clone https://github.com/Vidyasagar18snc/New-Version-Ai-Recruiteer.git
+cd New-Version-Ai-Recruiteer
+git checkout feature/project-setup
 
-```bash
-cd AI-Recruiter
-```
+
+Clone the frontend repository.
+
+bash
+git clone https://github.com/Vidyasagar18snc/New-UI-Code.git
+cd New-UI-Code
+git checkout feature/frontend-setup
+
 
 ---
 
-# Backend Setup
+## Install Dependencies
 
-Navigate to the backend project.
+Backend
 
-```bash
-cd backend
-```
-
-Install Maven dependencies.
-
-```bash
+bash
 mvn clean install
-```
 
----
 
-# Configure Database
-
-Start MongoDB locally.
-
-Default MongoDB URL:
-
-```
-mongodb://localhost:27017/airecruiter
-```
-
-Update your configuration inside:
-
-```
-src/main/resources/application.properties
-```
-
-Example:
-
-```properties
-spring.data.mongodb.uri=mongodb://localhost:27017/airecruiter
-```
-
----
-
-# Configure Environment Variables
-
-Update all required values inside:
-
-```
-application.properties
-```
-
-Example:
-
-```properties
-spring.data.mongodb.uri=
-
-aws.accessKey=
-
-aws.secretKey=
-
-aws.bucketName=
-
-google.client.id=
-
-google.client.secret=
-
-mail.username=
-
-mail.password=
-```
-
----
-
-# Run Backend
-
-```bash
-mvn spring-boot:run
-```
-
-or
-
-```bash
-./mvnw spring-boot:run
-```
-
-Backend starts at:
-
-```
-http://localhost:8081
-```
-
----
-
-# Frontend Setup
-
-Open another terminal.
-
-Navigate to frontend.
-
-```bash
-cd frontend
-```
-
-Install dependencies.
+Frontend
 
 ```bash
 npm install
 ```
 
-Run Angular.
+---
 
-```bash
+## Configuration
+
+### MongoDB
+
+Update the MongoDB connection in the `application.properties` file.
+
+properties
+spring.data.mongodb.uri=<MongoDB Connection String>
+
+
+### AWS S3
+
+Configure the following values.
+
+- AWS Access Key
+- AWS Secret Key
+- S3 Bucket Name
+- AWS Region
+
+### Google Calendar API
+
+Configure the following values.
+
+- Google Client ID
+- Google Client Secret
+
+- ---
+
+## Google Cloud Authorization
+
+When running the backend for the first time, the application requires authorization to access Google services (such as Google Calendar).
+
+1. Start the backend application.
+2. The application will generate a Google authorization URL in the console.
+3. Copy the generated URL.
+4. Send the authorization URL to the project maintainer.
+5. Open the URL in a web browser and sign in with the authorized Google account.
+6. Grant the requested permissions.
+7. After successful authorization, the application will store the required credentials locally, and subsequent runs will not require authorization unless the credentials are removed or expire.
+
+**Note:** If you are setting up the project for the first time, you must send the generated authorization link to the project maintainer so they can complete the Google Cloud authorization process.
+
+---
+
+### Email Configuration
+
+Configure the SMTP details in the `application.properties` file.
+
+---
+
+## Run the Backend
+
+bash
+mvn spring-boot:run
+
+
+Backend URL: http://localhost:8082
+
+---
+
+## Run the Frontend
+
+bash
 ng serve
-```
 
-Frontend starts at:
 
-```
-http://localhost:4200
-```
+or
 
----
+bash
+ng s
 
-# Login
-
-Open
-
-```
-http://localhost:4200
-```
-
-Login using your credentials.
+Frontend URL: http://localhost:4200
 
 ---
 
-# API Documentation
+## Swagger API
 
-Swagger UI
-
-```
-http://localhost:8081/swagger-ui/index.html
-```
+Swagger URL: http://localhost:8082/swagger-ui/index.html
 
 ---
 
-# Project Structure
+## Project Structure
 
+Backend
+
+src
+├── controller
+├── service
+├── repository
+├── model
+├── dto
+├── config
+└── resources
 ```
-AI-Recruiter
-│
-├── backend
-│   ├── controller
-│   ├── service
-│   ├── repository
-│   ├── model
-│   ├── dto
-│   ├── config
-│   ├── util
-│   └── resources
-│
-├── frontend
-│   ├── src
-│   ├── app
-│   ├── assets
-│   ├── environments
-│   └── styles
-│
-└── README.md
-```
+
+Frontend
+
+
+src
+├── app
+├── assets
+├── environments
+├── shared
+├── styles
+└── main.ts
+
 
 ---
 
-# Features
+## Common Commands
 
-- AI Recruitment
-- Resume Management
-- Candidate Tracking
-- Interview Scheduling
-- Offer Letter Generation
-- Employee Onboarding
-- Employee Dashboard
-- HR Dashboard
-- Knowledge Transfer (KT)
-- Asset Management
-- Offboarding
-- Alumni Management
-- Role-Based Access Control
-- Email Notifications
-- AWS S3 File Upload
-- Google Calendar Integration
+Backend
+
+bash
+mvn clean install
+mvn spring-boot:run
+mvn test
+
+
+Frontend
+
+bash
+npm install
+ng serve
+ng build
+ng test
 
 ---
 
-# Common Commands
+## Troubleshooting
+
+### MongoDB Connection Error
+
+- Ensure MongoDB is running.
+- Verify the MongoDB connection string.
+
+### Port Already in Use
+
+- Backend Port: 8081
+- Frontend Port: 4200
+
+Stop the existing process or change the application port.
+
+### Dependency Installation Failed
 
 Backend
 
 ```bash
 mvn clean install
-```
-
-```bash
-mvn spring-boot:run
 ```
 
 Frontend
@@ -292,76 +287,24 @@ Frontend
 npm install
 ```
 
-```bash
-ng serve
-```
+---
 
-Angular Production Build
+## Contributing
 
-```bash
-ng build
-```
+1. Create a new feature branch.
+2. Implement the required changes.
+3. Commit the changes.
+4. Push the branch to the repository.
+5. Create a Pull Request.
 
 ---
 
-# Troubleshooting
+## Contact
 
-## MongoDB Connection Error
-
-Ensure MongoDB service is running.
+For project setup, development, or deployment issues, contact the project maintainer or the development team.
 
 ---
 
-## Port Already in Use
+## License
 
-Backend:
-
-```
-8081
-```
-
-Frontend:
-
-```
-4200
-```
-
-Stop the process using the port or change the port configuration.
-
----
-
-## npm install Fails
-
-Clear npm cache.
-
-```bash
-npm cache clean --force
-```
-
-Then run:
-
-```bash
-npm install
-```
-
----
-
-## Maven Build Failure
-
-Clean the project.
-
-```bash
-mvn clean
-```
-
-Then rebuild.
-
-```bash
-mvn install
-```
-
----
-
-# Authors
-
-Developed by the AI Recruiter Development Team.
+This project is intended for internal company use only.
